@@ -676,10 +676,7 @@
     const tabs = document.createElement('div');
     tabs.id = 'ag-marketplace-tabs';
     
-    // Sort options to have Themes and Extensions first
-    const options = Array.from(select.options);
-    
-    options.forEach(opt => {
+    Array.from(select.options).forEach(opt => {
       const btn = document.createElement('button');
       btn.className = 'ag-market-tab-btn';
       if (select.value === opt.value) btn.classList.add('active');
@@ -691,13 +688,12 @@
         select.value = opt.value;
         select.dispatchEvent(new Event('change', { bubbles: true }));
         
-        // Visual feedback
+        // Force update visual state
         setTimeout(() => {
-            const newTabs = document.getElementById('ag-marketplace-tabs');
-            if (newTabs) {
-                newTabs.querySelectorAll('.ag-market-tab-btn').forEach(b => {
-                    b.classList.remove('active');
-                    if (b.innerText === opt.text) b.classList.add('active');
+            const currentTabs = document.getElementById('ag-marketplace-tabs');
+            if (currentTabs) {
+                currentTabs.querySelectorAll('.ag-market-tab-btn').forEach(b => {
+                    b.classList.toggle('active', b.innerText === opt.text);
                 });
             }
         }, 50);
@@ -705,12 +701,12 @@
       tabs.appendChild(btn);
     });
 
-    const header = document.querySelector('.marketplace-header');
-    if (header) {
-        // Try to insert after the search bar or title
-        const search = header.querySelector('.marketplace-header__search-container');
-        if (search) header.insertBefore(tabs, search.nextSibling);
-        else header.appendChild(tabs);
+    // Aggressive insertion to prevent disappearing
+    const target = document.querySelector('.marketplace-header__search-container')?.parentElement || 
+                   document.querySelector('.marketplace-header');
+                   
+    if (target && !target.contains(tabs)) {
+        target.prepend(tabs);
     }
   }
 
