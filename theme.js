@@ -1,3 +1,4 @@
+console.log('>> [AmbientGlass] Script Triggered! <<');
 // AmbientGlass — theme.js (v10.42) ✦ FINAL BUILD
 // • Branding: "AmbientGlass" added to Startup
 // • Entrance: Soft Drop & Zoom
@@ -1040,4 +1041,5 @@
   window.AmbientGlass = { safeNavigate, closeLibraryPanel };
   init();
 })();
+
 
