@@ -1040,3 +1040,4 @@
   window.AmbientGlass = { safeNavigate, closeLibraryPanel };
   init();
 })();
+
