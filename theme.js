@@ -43,24 +43,21 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     catch { window.location.hash = '#' + path; }
   }
 
-  function killTopbar() {
-    const selectors = [
-      '.main-topBar-background',
-      '.main-topBar-overlay',
-      '.main-topBar-container',
-      '.main-topBar-header',
-      '.Root__top-bar',
-      '[class*="topBar-background"]',
-      '[class*="topBar-overlay"]'
-    ];
-    selectors.forEach(sel => {
-      document.querySelectorAll(sel).forEach(el => {
-        el.style.setProperty('background', 'transparent', 'important');
-        el.style.setProperty('background-color', 'transparent', 'important');
-        el.style.setProperty('box-shadow', 'none', 'important');
-        el.style.setProperty('opacity', '0', 'important');
-      });
-    });
+    function killTopbar() {
+    const el = document.querySelector(".main-topBar-container");
+    if (!el) return;
+    
+    // AUSNAHME: Wenn wir im Marketplace sind, lassen wir die Topbar am Leben!
+    if (Spicetify.Platform.History.location.pathname.includes("marketplace")) {
+        el.style.setProperty("opacity", "1", "important");
+        el.style.setProperty("visibility", "visible", "important");
+        el.style.setProperty("background", "transparent", "important");
+        return;
+    }
+
+    el.style.setProperty("background", "transparent", "important");
+    el.style.setProperty("box-shadow", "none", "important");
+    el.style.setProperty("opacity", "0", "important");
   }
 
   function killResidues() {
@@ -662,61 +659,52 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     observer.observe(sidebar, { childList: true, subtree: true });
   }
 
-    function fixMarketplaceDropdown() {
+  function fixMarketplaceDropdown() {
     const path = Spicetify.Platform.History.location.pathname;
     if (!path.includes("marketplace")) return;
 
-    const select = document.querySelector(".marketplace-header select, .marketplace-header__dropdown select, .marketplace-header__dropdown");
-    if (!select || document.getElementById("ag-marketplace-tabs")) return;
-
-    select.style.setProperty("display", "none", "important");
-
-    const tabs = document.createElement("div");
-    tabs.id = "ag-marketplace-tabs";
-    
-    Array.from(select.options || []).forEach(opt => {
-      const btn = document.createElement("button");
-      btn.className = "ag-market-tab-btn";
-      if (select.value === opt.value) btn.classList.add("active");
-      btn.innerText = opt.text;
-      
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        select.value = opt.value;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-        setTimeout(fixMarketplaceDropdown, 50);
-      };
-      tabs.appendChild(btn);
+    // Fix 1: Handle Link-based Tabs (New Marketplace)
+    const links = document.querySelectorAll(".marketplace-tabBar-headerItemLink");
+    links.forEach(link => {
+        link.style.setProperty("display", "inline-block", "important");
+        link.style.setProperty("visibility", "visible", "important");
+        link.style.setProperty("opacity", "1", "important");
+        if (link.classList.contains("marketplace-tabBar-active")) {
+            link.classList.add("active");
+        }
     });
 
-    const header = document.querySelector(".marketplace-header");
-    if (header) {
-        const searchContainer = header.querySelector(".marketplace-header__search-container");
-        if (searchContainer) header.insertBefore(tabs, searchContainer);
-        else header.appendChild(tabs);
-    }
-  }));
-        
-        // Force update visual state
-        setTimeout(() => {
-            const currentTabs = document.getElementById('ag-marketplace-tabs');
-            if (currentTabs) {
-                currentTabs.querySelectorAll('.ag-market-tab-btn').forEach(b => {
-                    b.classList.toggle('active', b.innerText === opt.text);
-                });
-            }
-        }, 50);
-      };
-      tabs.appendChild(btn);
+    // Fix 2: Handle Dropdown-based Tabs (Old Marketplace)
+    const allSelects = document.querySelectorAll(".marketplace-header select");
+    let tabSelect = null;
+    allSelects.forEach(s => {
+        if (s.options[0]?.text.includes("Extensions") || s.options[0]?.text.includes("Themes") || s.options.length > 3) {
+            tabSelect = s;
+        }
     });
 
-    // Aggressive insertion to prevent disappearing
-    const target = document.querySelector('.marketplace-header__search-container')?.parentElement || 
-                   document.querySelector('.marketplace-header');
-                   
-    if (target && !target.contains(tabs)) {
-        target.prepend(tabs);
+    if (tabSelect && !document.getElementById("ag-marketplace-tabs")) {
+        tabSelect.style.setProperty("display", "none", "important");
+        const tabs = document.createElement("div");
+        tabs.id = "ag-marketplace-tabs";
+        Array.from(tabSelect.options).forEach(opt => {
+            const btn = document.createElement("button");
+            btn.className = "ag-market-tab-btn";
+            if (tabSelect.value === opt.value) btn.classList.add("active");
+            btn.innerText = opt.text;
+            btn.onclick = () => {
+                tabSelect.value = opt.value;
+                tabSelect.dispatchEvent(new Event("change", { bubbles: true }));
+                setTimeout(fixMarketplaceDropdown, 50);
+            };
+            tabs.appendChild(btn);
+        });
+        const header = document.querySelector(".marketplace-header");
+        if (header) {
+            const search = header.querySelector(".marketplace-header__search-container");
+            if (search) header.insertBefore(tabs, search);
+            else header.appendChild(tabs);
+        }
     }
   }
 
@@ -1050,6 +1038,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   window.AmbientGlass = { safeNavigate, closeLibraryPanel };
   init();
 })();
+
+
+
+
+
 
 
 

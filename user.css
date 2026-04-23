@@ -2057,3 +2057,49 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
  } 
   
  
+/* --- 26. MARKETPLACE TABBAR FIX (ULTRA VISIBILITY) --- */
+.marketplace-tabBar-headerItemLink, 
+[class*=\"marketplace-tabBar-headerItemLink\"] {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: #ffffff !important;
+    padding: 10px 22px !important;
+    border-radius: 14px !important;
+    margin: 6px !important;
+    text-decoration: none !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    z-index: 100000 !important;
+    backdrop-filter: blur(25px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
+}
+
+.marketplace-tabBar-active, [aria-current=\"page\"] {
+    background: linear-gradient(135deg, #7b5fdb, #4f8edb) !important;
+    box-shadow: 0 0 25px rgba(123, 95, 219, 0.8) !important;
+}
+
+/* --- 27. MARKETPLACE TOPBAR RESURRECTION --- */
+/* If the parent is opacity 0, children stay invisible. We must wake up the topbar! */
+body:has([id*=\"marketplace\"]) .main-topBar-container,
+body:has([class*=\"marketplace\"]) .main-topBar-container {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: none !important; /* Don't block clicks to things behind it */
+    background: transparent !important;
+}
+
+/* But keep the content (our buttons) clickable! */
+.main-topBar-topbarContentWrapper, 
+.marketplace-tabBar {
+    pointer-events: auto !important;
+}
+
+/* Ensure our buttons are actually on top */
+.marketplace-tabBar-headerItemLink {
+    z-index: 100001 !important;
+    position: relative !important;
+}
