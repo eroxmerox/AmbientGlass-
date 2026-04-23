@@ -2198,3 +2198,70 @@ body:has([class*=\"marketplace\"]) .main-topBar-container {
     pointer-events: auto !important;
     z-index: 999999 !important;
 }
+
+/* --- 31. DROPDOWN & SUBMENU REPAIR --- */
+/* Global Menus resetten (damit Share/Playlist wieder gehen) */
+div[role=\"menu\"], 
+.main-contextMenu-menu,
+.main-userWidget-menu {
+    translate: 0 0 !important; /* Verschiebung global entfernen */
+    overflow: visible !important; /* Wichtig für Submenüs! */
+}
+
+/* NUR das Profil-Dropdown verschieben (falls gewünscht) */
+.main-userWidget-menu {
+    margin-top: 10px !important;
+    margin-right: 10px !important;
+}
+
+/* Submenüs (Add to Playlist, Share) wieder sichtbar machen */
+div[role=\"menu\"] div[role=\"menu\"],
+.main-contextMenu-submenu {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 1000000 !important;
+    position: absolute !important;
+}
+
+/* Menü-Container Transparenz & Glas-Fix */
+.main-contextMenu-menuItem, .main-contextMenu-menuItemButton {
+    background-color: transparent !important;
+}
+
+.main-contextMenu-menuItem:hover, .main-contextMenu-menuItemButton:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* --- 32. HERO GLOW INTENSITY FIX --- */
+:root {
+    --hero-glow-intensity: 0.5; /* Default falls nicht gesetzt */
+}
+
+/* Der Hero Glow (um das Cover/Bild im Header) */
+.main-entityHeader-imageContainer, 
+.main-entityHeader-image,
+[data-testid=\"entity-image\"] {
+    box-shadow: 0 0 calc(40px * var(--hero-glow-intensity, 0.5)) calc(10px * var(--hero-glow-intensity, 0.5)) var(--spice-button) !important;
+    transition: box-shadow 0.3s ease !important;
+}
+
+/* Falls der Slider eine andere Variable nutzt (Check für Spicetify Standards) */
+body {
+    --glow-amount: calc(var(--hero-glow-intensity, 0.5) * 50px);
+}
+
+/* --- 33. HERO GLOW SLIDER RECONNECT --- */
+/* Wir nutzen jetzt --ag-glow-opacity, genau wie der Slider in der theme.js */
+.main-entityHeader-imageContainer, 
+.main-entityHeader-image,
+[data-testid=\"entity-image\"],
+.main-entityHeader-shadow {
+    box-shadow: 0 0 calc(60px * var(--ag-glow-opacity, 0.5)) calc(10px * var(--ag-glow-opacity, 0.5)) var(--spice-button) !important;
+    transition: box-shadow 0.3s ease !important;
+}
+
+/* Fallback falls der Slider-Wert extrem niedrig ist, damit man noch ein bisschen was sieht */
+:root {
+    --ag-glow-opacity: 0.5;
+}

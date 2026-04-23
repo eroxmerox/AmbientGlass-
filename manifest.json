@@ -1,24 +1,24 @@
-{
-  "name": "AmbientGlass",
-  "description": "Premium glassmorphism theme with floating cluster, atmospheric glows, and Apple-style aesthetics.",
-  "preview": "preview.png",
-  "readme": "README.md",
-  "usercss": "user.css",
-  "schemes": "color.ini",
-  "include": [
-    "https://raw.githubusercontent.com/eroxmerox/AmbientGlass/main/theme.js"
-  ],
-  "authors": [
-    {
-      "name": "EROX",
-      "url": "https://github.com/eroxmerox"
-    }
-  ],
-  "tags": [
-    "glassmorphism",
-    "premium",
-    "minimal",
-    "dark",
-    "V11"
-  ]
+﻿{
+    "name":  "AmbientGlass",
+    "description":  "Premium glassmorphism theme with floating cluster, atmospheric glows, and Apple-style aesthetics.",
+    "preview":  "preview.png",
+    "readme":  "README.md",
+    "usercss":  "user.css",
+    "schemes":  "color.ini",
+    "include":  [
+                    "https://raw.githubusercontent.com/eroxmerox/AmbientGlass/main/theme.js"
+                ],
+    "authors":  [
+                    {
+                        "name":  "EROX",
+                        "url":  "https://github.com/eroxmerox"
+                    }
+                ],
+    "tags":  [
+                 "glassmorphism",
+                 "premium",
+                 "minimal",
+                 "dark",
+                 "V13"
+             ]
 }
