@@ -220,7 +220,7 @@
         'xpui://theme/assets/startup.mp3',
         '/theme/assets/startup.mp3',
         'https://xpui.app.spotify.com/theme/assets/startup.mp3',
-        'https://raw.githubusercontent.com/itshe/AmbientGlass/main/assets/startup.mp3'
+        'https://raw.githubusercontent.com/eroxmerox/AmbientGlass-/main/assets/startup.mp3'
       ];
 
       for (const url of sources) {

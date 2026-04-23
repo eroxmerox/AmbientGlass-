@@ -2,7 +2,7 @@
 
 AmbientGlass is a state-of-the-art Spicetify theme inspired by modern glassmorphism and Apple-style aesthetics. It transforms your Spotify into a vibrant, atmospheric experience with floating UI elements and dynamic glows.
 
-![Preview](thumbnail.png)
+![Preview](preview.png)
 
 ## ✨ Features
 
