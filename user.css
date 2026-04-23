@@ -38,6 +38,23 @@ body {
   background: #08080f !important;
   position: relative;
   z-index: 0;
+/* --- GLOBAL TEXT VISIBILITY FIX --- */
+* {
+    /* Wir zwingen Texte dazu, NICHT transparent zu sein, 
+       selbst wenn sie spice-main als Farbe nutzen */
+    text-shadow: 0 0 1px rgba(0,0,0,0.1); 
+}
+
+/* Spezifische Spotify-Texte, die oft verschwinden */
+.main-type-base, 
+.main-type-mesto, 
+.main-type-ballad, 
+.main-entityHeader-description, 
+.main-entityHeader-metaDataText,
+[style*=\"color: var(--spice-main)\"],
+[style*=\"color:var(--spice-main)\"] {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
 }
 
 .Root__top-container,
@@ -2224,3 +2241,31 @@ div[role=\"menu\"] div[role=\"menu\"], .main-contextMenu-submenu {
 .main-entityHeader-imageContainer, .main-entityHeader-image, [data-testid=\"entity-image\"] {
     box-shadow: none !important;
 }
+
+/* --- 35. TEXT VISIBILITY & TRANSPARENCY FIX --- */
+/* Verhindert, dass Texte unsichtbar werden, wenn spice-main transparent ist */
+.main-entityHeader-description,
+.main-entityHeader-metaDataText,
+.main-type-base,
+.main-type-mesto,
+.main-type-ballad,
+.main-entityHeader-subtitle,
+[class*=\"Text-subdued\"] {
+    color: rgba(255, 255, 255, 0.7) !important; /* Sanftes Wei fr Meta-Texte */
+}
+
+/* Haupt-Texte immer vollwei */
+h1, h2, h3, h4, h5, h6,
+.main-type-mestoBold,
+.main-type-balladBold {
+    color: #ffffff !important;
+}
+
+/* Falls spice-main fr Hintergrnde genutzt wurde, machen wir NUR den Hintergrund transparent */
+.main-actionBarBackground-background,
+.main-entityHeader-backgroundColor,
+.main-entityHeader-overlay {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
