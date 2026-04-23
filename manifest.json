@@ -6,7 +6,7 @@
   "usercss": "user.css",
   "schemes": "color.ini",
   "include": [
-    "https://cdn.jsdelivr.net/gh/eroxmerox/AmbientGlass@main/theme.js"
+    "https://raw.githubusercontent.com/eroxmerox/AmbientGlass/main/theme.js"
   ],
   "authors": [
     {
