@@ -197,7 +197,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const l = `<svg viewBox="0 0 24 24" width="80" height="80" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.502 17.305c-.218.358-.684.474-1.042.256-2.848-1.74-6.433-2.133-10.655-1.17-.41.094-.813-.164-.906-.574-.094-.41.163-.813.573-.906 4.622-1.057 8.583-.605 11.774 1.345.358.218.474.685.256 1.043zm1.468-3.26c-.275.446-.86.59-1.306.314-3.258-2-8.226-2.583-12.08-1.413-.502.152-1.03-.134-1.182-.636-.152-.503.134-1.03.636-1.182 4.4-1.335 9.876-.683 13.618 1.618.447.275.59.86.314 1.306zm.128-3.41c-3.905-2.32-10.334-2.533-14.075-1.398-.6.182-1.24-.163-1.422-.763-.182-.6.163-1.24.763-1.422 4.29-1.302 11.393-1.04 15.894 1.63.54.32.715 1.014.395 1.554-.32.54-1.014.715-1.555.395z"/></svg>`;
     s.innerHTML = `
       <style>
-        #ag-startup-splash { position: fixed; inset: 0; background: #040408; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; transition: opacity 1s; }
+        #ag-startup-splash { position: fixed; inset: 0; background: #040408 !important; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; transition: opacity 1s; }
         #ag-startup-splash.fade-out { opacity: 0; pointer-events: none; }
         .ag-splash-glow { position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(123,95,219,0.4) 0%, rgba(79,142,235,0.1) 40%, transparent 70%); filter: blur(60px); animation: ag-glow-cinematic 8s infinite alternate ease-in-out; pointer-events: none; }
         .ag-splash-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 20px; }
@@ -622,6 +622,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function fixMarketplaceDropdown() {
+    return; // AG-FIX: Deaktiviert, da CSS nun das Layout übernimmt
     const path = Spicetify.Platform.History.location.pathname;
     if (!path.includes("marketplace")) return;
 
@@ -960,6 +961,22 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     }
   }
 
+  function fixSubmenuScroll() {
+    const submenus = document.querySelectorAll('div[role="menu"]:has(input), [data-radix-menu-content]:has(input)');
+    submenus.forEach(menu => {
+      menu.style.setProperty('max-height', '45vh', 'important');
+      menu.style.setProperty('display', 'flex', 'important');
+      menu.style.setProperty('flex-direction', 'column', 'important');
+      const viewport = menu.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.style.setProperty('flex', '1 1 auto', 'important');
+        viewport.style.setProperty('max-height', '100%', 'important');
+        viewport.style.setProperty('overflow-y', 'auto', 'important');
+        viewport.style.setProperty('overflow-x', 'hidden', 'important');
+      }
+    });
+  }
+
   function init() {
     console.log("%c AmbientGlass ✦ EROX %c", "background:#7b5fdb;color:#fff;padding:5px;border-radius:5px;", "");
     try { applyCustomColors(); } catch(e) {}
@@ -978,7 +995,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       try {
         killTopbar(); killResidues(); healArtistImage(); enforceProfileHitbox();
         updateVisibility(); fixFriendsPanel(); injectSettingsToMenu();
-        fixYouLiked(); fixMarketplaceDropdown();
+        fixYouLiked(); fixMarketplaceDropdown(); fixSubmenuScroll();
       // --- STABLE JAM & MARKETPLACE FIX ---
       const real = document.querySelector(".main-connectBar-connectBar");
       let pill = document.getElementById("ag-jam-floating-pill");

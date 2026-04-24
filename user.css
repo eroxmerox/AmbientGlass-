@@ -1,4 +1,4 @@
-
+﻿
 /* AmbientGlass - user.css (v14.0 FINAL GLOW & MARKET) */
 :root {
     --spice-main: transparent !important;
@@ -2175,10 +2175,7 @@ div[role="menu"], .main-contextMenu-menu, .main-userWidget-menu {
     overflow: visible !important;
 }
 .main-userWidget-menu { margin-top: 10px !important; margin-right: 10px !important; }
-div[role="menu"] div[role="menu"], .main-contextMenu-submenu {
-    display: block !important; opacity: 1 !important; visibility: visible !important;
-    z-index: 1000000 !important; position: absolute !important;
-}
+/* TOXIC BLOCK REMOVED BY AG-FIX */
 .main-contextMenu-menuItem, .main-contextMenu-menuItemButton { background-color: transparent !important; }
 .main-contextMenu-menuItem:hover, .main-contextMenu-menuItemButton:hover { background-color: rgba(255, 255, 255, 0.1) !important; }
 
@@ -2442,3 +2439,295 @@ button[aria-label=\"More\"],
     z-index: 100000 !important;
 }
 \n#ag-jam-floating-pill { z-index: 1000000 !important; pointer-events: auto !important; }\n
+/* ==========================================================
+   AMBIENTGLASS: FINAL MODAL & MARKETPLACE RESCUE (V15)
+   ========================================================== */
+
+/* --- 1. MARKETPLACE OBSERVER DEFEAT --- */
+.marketplace-tabBar,
+.marketplace-tabBar-nav,
+.main-topBar-topbarContentWrapper,
+.main-topBar-topbarContent {
+    min-width: max-content !important;
+    contain: none !important;
+    overflow: visible !important;
+}
+
+.marketplace-tabBar-headerItem,
+.marketplace-tabBar-headerItemLink {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    transform: none !important;
+}
+
+.marketplace-tabBar-headerItem[data-tab="More"],
+.marketplace-tabBar-headerItem:has(button[aria-haspopup="menu"]),
+.marketplace-tabBar-headerItem:last-child:has(svg) {
+    display: none !important;
+    width: 0 !important;
+    pointer-events: none !important;
+}
+
+/* --- 2. PLAYLIST EDIT DETAILS MODAL REPAIR --- */
+div[role="dialog"][aria-label="Edit details"],
+.main-playlistEditDetailsModal-container,
+div[role="dialog"]:has(.main-playlistEditDetailsModal-contentContainer) {
+    width: 700px !important;
+    max-width: 700px !important;
+    min-width: 700px !important;
+    height: auto !important;
+}
+
+.main-playlistEditDetailsModal-contentContainer {
+    display: grid !important;
+    grid-template-columns: 200px 1fr !important;
+    gap: 32px !important;
+    padding: 24px !important;
+    margin: 0 !important;
+    align-items: center !important;
+}
+
+.main-playlistEditDetailsModal-imageContainer {
+    width: 200px !important;
+    height: 200px !important;
+    min-width: 200px !important;
+    margin: 0 !important;
+    position: relative !important;
+    transform: none !important;
+}
+
+.main-playlistEditDetailsModal-imageContainer img {
+    position: static !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+.main-playlistEditDetailsModal-textElementContainer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+/* ==========================================================
+   AMBIENTGLASS: THE TRUE OVERLAY FIX (V7 - TRANSFORM RESCUE)
+   ========================================================== */
+
+/* --- 1. DEN TRANSFORM-BUG KILLEN --- */
+body .ag-user-menu,
+body ul.main-contextMenu-menu.ag-user-menu,
+body div[role="menu"] {
+    transform: none !important;
+    translate: none !important;
+}
+
+/* --- 2. ALTE ABSOLUTE-HACKS ÜBERSCHREIBEN --- */
+body div[role="menu"] div[role="menu"], 
+body .main-contextMenu-submenu {
+    position: relative !important;
+}
+
+/* --- 3. ALLE MENÜ-SCROLLBARS SCHICK MACHEN --- */
+body [data-radix-scroll-area-viewport]::-webkit-scrollbar { 
+    width: 6px !important; 
+}
+body [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb { 
+    background: rgba(123, 95, 219, 0.4) !important; 
+    border-radius: 10px !important; 
+}
+body [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover { 
+    background: rgba(123, 95, 219, 0.8) !important; 
+}
+
+/* ==========================================================
+   AMBIENTGLASS: FINAL BOSS FIXES (MODAL & MARKETPLACE)
+   ========================================================== */
+
+/* --- 1. PLAYLIST EDIT DETAILS MODAL FIX --- */
+div[role="dialog"][aria-label="Edit details"],
+.main-playlistEditDetailsModal-container,
+div[role="dialog"]:has(.main-playlistEditDetailsModal-contentContainer) {
+    width: 750px !important;
+    max-width: 800px !important;
+    min-width: 600px !important;
+    height: auto !important;
+}
+
+.main-playlistEditDetailsModal-contentContainer {
+    display: grid !important;
+    grid-template-columns: 250px 1fr !important;
+    gap: 24px !important;
+    padding: 24px !important;
+    align-items: flex-start !important;
+}
+
+.main-playlistEditDetailsModal-imageContainer {
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1/1 !important;
+}
+
+.main-playlistEditDetailsModal-textElementContainer {
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    width: 100% !important;
+}
+
+/* --- 2. MARKETPLACE TAB BAR RESURRECTION --- */
+.marketplace-header select,
+.marketplace-header__dropdown,
+.marketplace-header__search-container + div select {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.marketplace-tabBar,
+.marketplace-tabBar-header,
+nav.marketplace-tabBar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    contain: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+}
+
+.marketplace-tabBar-headerItem,
+.marketplace-tabBar-headerItemLink {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+}
+
+.marketplace-tabBar-headerItem[data-tab="More"],
+.marketplace-tabBar-headerItem:has([aria-haspopup="menu"]),
+.marketplace-tabBar-headerItem:last-child:has(svg) {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* ==========================================================
+   AMBIENTGLASS: THE ULTIMATE APPEND FIXES
+   ========================================================== */
+
+/* --- 1. PLAYLIST EDIT DETAILS MODAL --- */
+div[role="dialog"][aria-label="Edit details"],
+div[role="dialog"]:has(.main-playlistEditDetailsModal-contentContainer) {
+    min-width: 750px !important; width: 750px !important;
+}
+.main-playlistEditDetailsModal-contentContainer {
+    display: flex !important; flex-direction: row !important;
+    gap: 40px !important; padding: 24px !important;
+}
+.main-playlistEditDetailsModal-imageContainer {
+    width: 200px !important; height: 200px !important; min-width: 200px !important;
+    flex-shrink: 0 !important; margin: 0 !important;
+}
+.main-playlistEditDetailsModal-textElementContainer {
+    flex-grow: 1 !important; display: flex !important;
+    flex-direction: column !important; gap: 16px !important; margin: 0 !important;
+}
+
+/* --- 2. MARKETPLACE TAB BAR (CENTERED & VISIBLE) --- */
+.marketplace-header select, .marketplace-header__dropdown,
+.marketplace-tabBar-headerItem[data-tab="More"],
+.marketplace-tabBar-headerItem:has(button[aria-haspopup="menu"]),
+.marketplace-tabBar-headerItem:last-child:has(svg) {
+    display: none !important; pointer-events: none !important;
+}
+.marketplace-tabBar, .marketplace-tabBar-header, .marketplace-tabBar-nav {
+    display: flex !important; flex-wrap: wrap !important;
+    justify-content: center !important; align-items: center !important;
+    contain: none !important; overflow: visible !important;
+    width: 100% !important; min-width: 100% !important;
+}
+.marketplace-tabBar-headerItem, .marketplace-tabBar-headerItemLink {
+    display: inline-flex !important; visibility: visible !important; opacity: 1 !important;
+}
+
+/* --- 3. CONTEXT MENU OVERLAY (V7 TRANSFORM RESCUE) --- */
+body .ag-user-menu,
+body ul.main-contextMenu-menu.ag-user-menu,
+body div[role="menu"] {
+    transform: none !important; translate: none !important;
+}
+body [data-radix-scroll-area-viewport]::-webkit-scrollbar { width: 6px !important; }
+body [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb { 
+    background: rgba(123, 95, 219, 0.4) !important; border-radius: 10px !important; 
+}
+body [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover { 
+    background: rgba(123, 95, 219, 0.8) !important; 
+}
+
+/* --- 4. LISTENING STATS TEXT FIX --- */
+div.overview-value, [class*="overview-value"] {
+    color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;
+}
+div.overview-secondary, [class*="overview-secondary"] {
+    color: rgba(255, 255, 255, 0.7) !important; -webkit-text-fill-color: rgba(255, 255, 255, 0.7) !important;
+}
+/* ==========================================================
+   AMBIENTGLASS: GLOBAL TEXT & BACKGROUND VARIABLE OVERRIDE
+   ========================================================== */
+
+/* 1. GLOBALE TEXTFARBEN ENTKOPPELN */
+:root {
+    --text-base: #ffffff !important;
+    --text-subdued: rgba(255, 255, 255, 0.7) !important;
+    --text-bright-accent: #ffffff !important;
+}
+
+/* 2. ABSOLUTE TEXT-REGEL (Trennt Textfarbe vom Hintergrund) */
+[data-encore-id="text"], 
+[class*="Type__TypeElement"],
+span[data-encore-id="text"],
+p[data-encore-id="text"] {
+    color: var(--text-base) !important;
+    -webkit-text-fill-color: var(--text-base) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6) !important;
+}
+
+/* 3. GEDIMMTER TEXT (Subtext, Metadaten) */
+[data-encore-id="text"][color="textSubdued"],
+[class*="Type__TypeElement"][color="textSubdued"] {
+    color: var(--text-subdued) !important;
+    -webkit-text-fill-color: var(--text-subdued) !important;
+}
+
+/* 4. DIE HINTERGRUND-VARIABLEN DER KARTEN TÃ–TEN */
+.main-card-card, 
+[class*="Card_"],
+.Root__main-view *,
+aside[data-testid="right-sidebar"] * {
+    --background-base: transparent !important;
+    --background-elevated-base: transparent !important;
+    --background-highlight: transparent !important;
+    --background-press: transparent !important;
+    --card-color: transparent !important;
+}
+
+/* 5. SCHUTZ FÃœR BUTTONS (z.B. Play-Button) */
+button[style*="background-color: rgb(30, 215, 96)"] [data-encore-id="text"],
+button[style*="background-color: #1ed760"] [data-encore-id="text"],
+[data-encore-id="buttonPrimary"] [data-encore-id="text"] {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    text-shadow: none !important;
+}
