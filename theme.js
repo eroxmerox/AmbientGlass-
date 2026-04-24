@@ -867,8 +867,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         --spice-button-active: ${accent} !important;
         --spice-accent: ${accent} !important;
       }
-      html, body, .Root__top-container, .under-main-view { background: #040408 !important; }
-      #ag-startup-splash { background: #040408 !important; }
+      html, body, .Root__top-container, .under-main-view { background: transparent !important; }
+      #ag-startup-splash { background: transparent !important; }
 
       .ag-blob { background: ${blobs} !important; opacity: var(--ag-blobs-opacity) !important; }
       .ag-cluster-btn { background: ${btn_bg} !important; border: 1px solid rgba(255,255,255,0.05) !important; }
@@ -948,21 +948,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     `;
   }
 
-  function applyPrivacy() {
-    if (localStorage.getItem('ag-privacy') !== 'true') return;
-    const s = document.createElement('style'); s.id = 'ag-privacy-logic';
-    s.textContent = `img, [style*="background-image"], .main-image-image, .main-entityHeader-image, .main-avatar-image { filter: brightness(0) !important; background: #000 !important; background-image: none !important; }`;
-    document.head.appendChild(s);
-    const replace = (n) => {
-      if (n.nodeType === 3) {
-        const t = n.textContent.trim();
-        if (t.length > 1 && !['Your Music','AmbientGlass','Apply','Reset','Settings'].some(w => t.includes(w))) n.textContent = "Your Music";
-      } else if (n.nodeType === 1 && !['STYLE','SCRIPT','INPUT','TEXTAREA'].includes(n.tagName) && !n.closest('#ag-settings-panel')) n.childNodes.forEach(replace);
-    };
-    new MutationObserver(m => m.forEach(r => r.addedNodes.forEach(replace))).observe(document.body, { childList:true, subtree:true });
-    replace(document.body);
-  }
-
+  function applyPrivacy() { return; }
   function injectSettingsToMenu() {
     const menu = document.querySelector('ul.main-contextMenu-menu');
     if (menu && !document.getElementById('ag-menu-item')) {
@@ -993,6 +979,43 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         killTopbar(); killResidues(); healArtistImage(); enforceProfileHitbox();
         updateVisibility(); fixFriendsPanel(); injectSettingsToMenu();
         fixYouLiked(); fixMarketplaceDropdown();
+      // --- STABLE JAM & MARKETPLACE FIX ---
+      const real = document.querySelector(".main-connectBar-connectBar");
+      let pill = document.getElementById("ag-jam-floating-pill");
+      const isJam = real && (real.innerText.toLowerCase().includes("jam") || real.innerText.includes("•") || real.classList.contains("main-connectBar-connected"));
+      
+      if (isJam) {
+          if (!pill) {
+              pill = document.createElement("div"); pill.id = "ag-jam-floating-pill";
+              document.body.appendChild(pill);
+              pill.onclick = () => {
+                  const qBtn = document.querySelector('button[aria-label="Queue"]') || document.querySelector('button[data-testid="control-button-queue"]');
+                  if (qBtn) qBtn.click(); else Spicetify.Platform.History.push({ pathname: "/queue" });
+              };
+          }
+          let jamText = real.innerText;
+          if (!jamText || jamText.length < 3) {
+              const spans = real.querySelectorAll('span, div');
+              for (let s of spans) {
+                  if (s.innerText && s.innerText.length > 2 && !s.innerText.includes('Connect')) {
+                      jamText = s.innerText; break;
+                  }
+              }
+          }
+          pill.innerText = (jamText || "Jam Active").replace(/Connect to a device/gi, "").trim();
+          pill.style.display = "block";
+          real.style.setProperty("opacity", "0", "important");
+          real.style.setProperty("pointer-events", "none", "important");
+          real.style.setProperty("height", "0", "important");
+      } else if (pill) { pill.style.display = "none"; }
+
+      const mSearch = document.querySelector(".marketplace-header__search-container");
+      if (mSearch) {
+          mSearch.style.setProperty("opacity", "0", "important");
+          mSearch.style.setProperty("pointer-events", "none", "important");
+          mSearch.style.setProperty("height", "0", "important");
+      }
+
       } catch(e) {}
     }, 500);
   }

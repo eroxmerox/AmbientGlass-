@@ -1,81 +1,31 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   AmbientGlass â€” user.css  (v9.6)
-   â€¢ Home button positioned exactly above searchbar (matches v8.1)
-   â€¢ Stable hover cluster (buttons appear OUTWARD, home stays still)
-   â€¢ Inline lyrics in upper area (not fullscreen)
-   â€¢ Black playlist background fix
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
+/* AmbientGlass - user.css (v14.0 FINAL GLOW & MARKET) */
 :root {
-  --ag-accent-1:      #7B5FDB;
-  --ag-accent-2:      #4F8EDB;
-  --ag-accent-3:      #DB4FA0;
-  --ag-ambient-color: rgba(123, 95, 219, 0.65);
-  --ag-ambient-soft:  rgba(180, 100, 255, 0.40);
-
-  /* FORCING TRANSPARENCY ON SPOTIFY MAIN BACKGROUND */
-  --spice-main:              transparent !important;
-  --spice-main-elevated:     transparent !important;
-  --spice-sidebar:           #08080f;
-  --spice-player:            #08080f;
-  --spice-card:              transparent;
-  --spice-button:            #7B5FDB;
-  --spice-button-active:     #9B7FFF;
-  --spice-text:              #F0F0FF;
-  --spice-subtext:           #8888AA;
-  --spice-tab-active:        #7B5FDB;
-  --spice-notification:      #7B5FDB;
-  --spice-shadow:            transparent;
-  --spice-selected-row:      rgba(123, 95, 219, 0.15);
-  --spice-highlight-elevated:transparent;
-  --spice-surface:           transparent;
-  --spice-misc:              transparent;
+    --spice-main: transparent !important;
+    --spice-main-elevated: transparent !important;
 }
+body { background: #040408 !important; }
+.Root__top-container, .main-view-container, .under-main-view { background: transparent !important; }
 
-/* â”€â”€ 1. BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-
-body {
-  background: #08080f !important;
-  position: relative;
-  z-index: 0;
-/* --- GLOBAL TEXT VISIBILITY FIX --- */
-* {
-    /* Wir zwingen Texte dazu, NICHT transparent zu sein, 
-       selbst wenn sie spice-main als Farbe nutzen */
-    text-shadow: 0 0 1px rgba(0,0,0,0.1); 
+/* HERO GLOW FIX */
+#ag-hero-glow {
+    position: fixed !important;
+    top: 32vh !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 800px !important;
+    height: 600px !important;
+    background: radial-gradient(circle, var(--ag-ambient-color, #7b5fdb) 0%, transparent 70%) !important;
+    opacity: var(--ag-glow-opacity, 0.8) !important;
+    filter: blur(80px) !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    display: block !important;
+    visibility: visible !important;
 }
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 2. SCHWARZE PLAYLIST/ALBUM HINTERGRÃƒÅ“NDE WEG Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
-/* Spezifische Spotify-Texte, die oft verschwinden */
-.main-type-base, 
-.main-type-mesto, 
-.main-type-ballad, 
-.main-entityHeader-description, 
-.main-entityHeader-metaDataText,
-[style*=\"color: var(--spice-main)\"],
-[style*=\"color:var(--spice-main)\"] {
-    color: rgba(255, 255, 255, 0.8) !important;
-}
-}
-
-.Root__top-container,
-.Root__main-view,
-.main-view-container,
-.main-view-container__scroll-node,
-.main-view-container__scroll-node-child,
-.under-main-view,
-.os-viewport,
-.os-content,
-[style*="--spice-main"] {
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-}
-
-.Root__top-container { position: relative !important; z-index: 5 !important; }
-
-/* â”€â”€ 2. SCHWARZE PLAYLIST/ALBUM HINTERGRÃœNDE WEG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-
-/* Lila Filter-Block Ã¼ber Playlisten weg */
+/* Lila Filter-Block ÃƒÂ¼ber Playlisten weg */
 .main-home-filterChipsSection,
 .main-home-filterChipsSectionActive,
 [class*="filterChipsSection"],
@@ -93,10 +43,10 @@ body {
   display: none !important;
 }
 
-/* Spotify rendert fÃ¼r jede Page einen "color" gradient hinter dem Header.
+/* Spotify rendert fÃƒÂ¼r jede Page einen "color" gradient hinter dem Header.
    WICHTIG: .main-entityHeader-background (echtes Bild/Banner) bleibt unangetastet! */
 
-/* Farb-Tint-Overlays killen â€” NUR den soliden Background, NICHT das Bild */
+/* Farb-Tint-Overlays killen Ã¢â‚¬â€ NUR den soliden Background, NICHT das Bild */
 .main-entityHeader-backgroundColor,
 .main-actionBar-ActionBarBackground,
 .main-actionBar-actionBarBackground,
@@ -110,14 +60,14 @@ body {
   box-shadow: none !important;
 }
 
-/* Spezieller Schutz fÃ¼r Bilder in Headern */
+/* Spezieller Schutz fÃƒÂ¼r Bilder in Headern */
 [class*="entityHeader"] [style*="background-image"] {
   background-color: transparent !important;
   opacity: 1 !important;
   visibility: visible !important;
 }
 
-/* Artist-Overlay (der lila/dunkle Verlauf) â€” Wir machen ihn transparent,
+/* Artist-Overlay (der lila/dunkle Verlauf) Ã¢â‚¬â€ Wir machen ihn transparent,
    aber NICHT opacity 0, damit der Artist-Banner sichtbar bleibt! */
 .main-entityHeader-overlay,
 [class*="entityHeader_overlay"] {
@@ -128,7 +78,7 @@ body {
 /* Artist-Bild/Banner: Atmos-Blur Effekt */
 .main-entityHeader-background {
   opacity: 1 !important;
-  filter: blur(40px) brightness(0.7) !important; /* Der gewÃ¼nschte Blur-Look */
+  filter: blur(40px) brightness(0.7) !important; /* Der gewÃƒÂ¼nschte Blur-Look */
   transform: scale(1.1) !important;
   transition: filter 0.5s ease !important;
 }
@@ -140,7 +90,7 @@ body {
 }
 
 
-/* â”€â”€ 3. TOPBAR MANAGEMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 3. TOPBAR MANAGEMENT Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 .Root__top-bar,
 .main-topBar-container,
@@ -158,7 +108,7 @@ header.main-topBar-container,
   box-shadow: none !important;
 }
 
-/* WICHTIG: Fenster-Kontrollen und ZurÃ¼ck/Vor-Pfeile wieder klickbar machen (Ã¼berschreibt pointer-events: none von oben) */
+/* WICHTIG: Fenster-Kontrollen und ZurÃƒÂ¼ck/Vor-Pfeile wieder klickbar machen (ÃƒÂ¼berschreibt pointer-events: none von oben) */
 .main-topBar-historyButtons,
 .main-globalNav-historyButtons,
 .main-topBar-topbarContentLeft,
@@ -185,7 +135,7 @@ header.main-topBar-container,
   display: none !important;
 }
 
-/* â”€â”€ 4. NATIVE DOCK TELEPORTATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 4. NATIVE DOCK TELEPORTATION Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 /* Die native rechte Sektion nach links schieben und vertikal anordnen */
 .main-topBar-topbarContentRight,
@@ -195,7 +145,7 @@ div.main-globalNav-globalNav > div:last-child,
 [data-testid="topbar"] > div:last-child {
   position: fixed !important;
   top: 180px !important;  
-  left: -36px !important;  /* Noch weiter nach links, bÃ¼ndig mit den Punkten */
+  left: -36px !important;  /* Noch weiter nach links, bÃƒÂ¼ndig mit den Punkten */
   z-index: 99999 !important;
   display: flex !important;
   flex-direction: column !important;
@@ -205,7 +155,7 @@ div.main-globalNav-globalNav > div:last-child,
   align-items: center !important;
 }
 
-/* Entferne HintergrÃ¼nde von Gruppen-Containern und zwinge sie ins Layout */
+/* Entferne HintergrÃƒÂ¼nde von Gruppen-Containern und zwinge sie ins Layout */
 .main-topBar-topbarContentRight > div,
 .main-globalNav-navSection:last-child > div,
 header.main-topBar-container > div:last-child > div,
@@ -224,7 +174,7 @@ div.main-globalNav-globalNav > div:last-child > div,
   right: auto !important;
 }
 
-/* Die echten, klickbaren Buttons im Glas-Look stylen und ausbrÃ¼che verhindern */
+/* Die echten, klickbaren Buttons im Glas-Look stylen und ausbrÃƒÂ¼che verhindern */
 .main-topBar-topbarContentRight button,
 .main-globalNav-navSection:last-child button,
 header.main-topBar-container > div:last-child button,
@@ -243,7 +193,7 @@ div.main-globalNav-globalNav > div:last-child button,
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
   margin: 0 !important; 
   padding: 0 !important;
-  /* CRITICAL FIX: Zwinge absolut positionierte Erweiterungs-Buttons (wie Ghost/Bell) zurÃ¼ck in die Spalte! */
+  /* CRITICAL FIX: Zwinge absolut positionierte Erweiterungs-Buttons (wie Ghost/Bell) zurÃƒÂ¼ck in die Spalte! */
   position: relative !important;
   top: auto !important;
   left: auto !important;
@@ -266,14 +216,14 @@ div.main-globalNav-globalNav > div:last-child button:hover,
   border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
-/* Icons weiÃŸ fÃ¤rben */
+/* Icons weiÃƒÅ¸ fÃƒÂ¤rben */
 .main-topBar-topbarContentRight button svg,
 .main-globalNav-navSection:last-child button svg {
   fill: white !important;
   color: white !important;
 }
 
-/* CRITICAL FIX: Hebe den gesamten Top-Container an und drÃ¼cke die Main-View nach unten! */
+/* CRITICAL FIX: Hebe den gesamten Top-Container an und drÃƒÂ¼cke die Main-View nach unten! */
 .Root__top-container {
   position: relative !important; 
   z-index: 999999 !important;
@@ -288,7 +238,7 @@ div.main-globalNav-globalNav > div:last-child button:hover,
    PROFIL-WIDGET VISUELLES STYLING (Hitbox wird per JS in theme.js erzwungen!)
    ========================================================================== */
 
-/* Wir machen die innere Box zum wunderschÃ¶nen 44x44 Glaskreis */
+/* Wir machen die innere Box zum wunderschÃƒÂ¶nen 44x44 Glaskreis */
 .main-userWidget-box {
   width: 44px !important;
   height: 44px !important;
@@ -336,7 +286,7 @@ button[data-testid="user-widget-link"] {
   display: none !important;
 }
 
-/* Hitbox-Hack lÃ¶schen, brauchen wir nicht mehr bei position: fixed */
+/* Hitbox-Hack lÃƒÂ¶schen, brauchen wir nicht mehr bei position: fixed */
 
 .main-userWidget-box:hover, .main-userWidget-box:focus {
   background: transparent !important;
@@ -359,7 +309,7 @@ a[href="/"][class*="logo"] {
   display: none !important;
 }
 
-/* â”€â”€ 4. LEFT SIDEBAR weg â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 4. LEFT SIDEBAR weg Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 .Root__nav-bar,
 .Root__left-sidebar,
@@ -375,11 +325,11 @@ aside[aria-label="Main"],
   pointer-events: none !important;
 }
 
-/* â”€â”€ 5. HOME BUTTON CLUSTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 5. HOME BUTTON CLUSTER Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
-/* Cluster ist eine fixe Wrapper-Box mit fixer Breite â€” Home bleibt immer
-   exakt mittig, Library-Buttons fahren NACH AUÃŸEN raus aus dem Cluster.
-   Das heiÃŸt: Home bewegt sich NIE, egal ob Hover oder nicht. */
+/* Cluster ist eine fixe Wrapper-Box mit fixer Breite Ã¢â‚¬â€ Home bleibt immer
+   exakt mittig, Library-Buttons fahren NACH AUÃƒÅ¸EN raus aus dem Cluster.
+   Das heiÃƒÅ¸t: Home bewegt sich NIE, egal ob Hover oder nicht. */
 
   #ag-home-cluster {
   position: fixed !important;
@@ -398,7 +348,7 @@ aside[aria-label="Main"],
   visibility: hidden;
 }
 
-/* Home-Button â€” ABSOLUTE position innerhalb Cluster, immer mittig oben */
+/* Home-Button Ã¢â‚¬â€ ABSOLUTE position innerhalb Cluster, immer mittig oben */
 #ag-home-button {
   position: absolute !important;
   top: 0 !important;
@@ -407,7 +357,7 @@ aside[aria-label="Main"],
   z-index: 2 !important;
 }
 
-/* Library buttons â€” absolute positioniert, fahren nach AUÃŸEN */
+/* Library buttons Ã¢â‚¬â€ absolute positioniert, fahren nach AUÃƒÅ¸EN */
 .ag-cluster-btn:not(#ag-home-button) {
   position: absolute !important;
   top: 0 !important;
@@ -418,7 +368,7 @@ aside[aria-label="Main"],
   filter: blur(4px);
 }
 
-/* Staggered spring transitions â€” each button gets its own delay */
+/* Staggered spring transitions Ã¢â‚¬â€ each button gets its own delay */
 .ag-cluster-liked {
   transform: translateX(-50%) scale(0.3) rotate(-15deg) !important;
   transition: all 0.5s cubic-bezier(0.34, 1.8, 0.64, 1) 0s;
@@ -452,7 +402,7 @@ aside[aria-label="Main"],
   filter: blur(0px);
 }
 
-/* Alle Buttons im Cluster â€” Glassmorphism-Style */
+/* Alle Buttons im Cluster Ã¢â‚¬â€ Glassmorphism-Style */
 .ag-cluster-btn {
   width: 44px !important;
   height: 44px !important;
@@ -477,7 +427,7 @@ aside[aria-label="Main"],
 }
 .ag-cluster-btn * { pointer-events: none !important; }
 
-/* Home-Button hover: NUR Glow Ã¤ndern, KEIN scale (verhindert Flackern) */
+/* Home-Button hover: NUR Glow ÃƒÂ¤ndern, KEIN scale (verhindert Flackern) */
 #ag-home-button:hover {
   background: rgba(35, 28, 60, 0.85) !important;
   border-color: rgba(123, 95, 219, 0.45) !important;
@@ -491,7 +441,7 @@ aside[aria-label="Main"],
   color: rgba(240, 240, 255, 0.92) !important;
 }
 
-/* Library buttons hover â€” leichter scale (sind ja schon abgesetzt) */
+/* Library buttons hover Ã¢â‚¬â€ leichter scale (sind ja schon abgesetzt) */
 .ag-cluster-liked:hover {
   background: rgba(60, 28, 50, 0.90) !important;
   border-color: rgba(219, 79, 160, 0.55) !important;
@@ -513,7 +463,7 @@ aside[aria-label="Main"],
 }
 .ag-cluster-playlists svg { color: rgba(220, 210, 255, 0.95) !important; }
 
-/* â”€â”€ 6. LIBRARY PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 6. LIBRARY PANEL Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 #ag-lib-panel-backdrop {
   position: fixed !important;
@@ -721,7 +671,7 @@ aside[aria-label="Main"],
 #ag-lib-panel-grid::-webkit-scrollbar { width: 6px; }
 #ag-lib-panel-grid::-webkit-scrollbar-thumb { background: rgba(123, 95, 219, 0.3); border-radius: 99px; }
 
-/* â”€â”€ 7. HERO GLOW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 7. HERO GLOW Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 #ag-hero-glow {
   position: fixed !important;
@@ -731,7 +681,7 @@ aside[aria-label="Main"],
   width: 130vw !important;
   height: 110vh !important;
   pointer-events: none !important;
-  z-index: -1 !important;
+  z-index: 0 !important;
   background:
     radial-gradient(ellipse 45% 50% at 50% 50%, var(--ag-ambient-color, rgba(123, 95, 219, 0.65)) 0%, transparent 65%),
     radial-gradient(ellipse 28% 32% at 50% 50%, var(--ag-ambient-soft, rgba(180, 100, 255, 0.40)) 0%, transparent 70%);
@@ -745,7 +695,7 @@ aside[aria-label="Main"],
   50%      { transform: translate(-50%, -50%) scale(1.04); }
 }
 
-/* â”€â”€ 8. SEARCHBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 8. SEARCHBAR Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 #ag-centered-search {
   position: fixed;
@@ -800,7 +750,7 @@ aside[aria-label="Main"],
 }
 #ag-centered-search input::placeholder { color: rgba(180,170,220,0.55) !important; }
 
-/* â”€â”€ 9. CONTENT PADDING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 9. CONTENT PADDING Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 .main-view-container__scroll-node-child {
   padding-top: 50vh !important;
@@ -815,13 +765,13 @@ aside[aria-label="Main"],
   flex-shrink: 0 !important;
 }
 
-/* â”€â”€ 10. INLINE LYRICS â€” in oberen Bereich, transparent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 10. INLINE LYRICS Ã¢â‚¬â€ in oberen Bereich, transparent Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 /* Wenn Lyrics-Page aktiv ist:
    Wir verstecken den normalen Content-Bereich nicht, aber positionieren
    Lyrics als overlay im oberen Drittel mit transparentem Hintergrund. */
 
-/* Lyrics Container â€” oben fixed im "leeren" Bereich */
+/* Lyrics Container Ã¢â‚¬â€ oben fixed im "leeren" Bereich */
 .lyrics-lyrics-container,
 .lyrics-lyricsContainer-LyricsContainer,
 .main-nowPlayingView-lyricsContainer,
@@ -869,9 +819,9 @@ aside[aria-label="Main"],
   border-radius: 12px !important;
 }
 
-/* Schrift-Normalisierung fÃ¼r alle KÃ¼nstler */
+/* Schrift-Normalisierung fÃƒÂ¼r alle KÃƒÂ¼nstler */
 .main-entityHeader-title {
-  font-size: 82px !important; /* Feste GrÃ¶ÃŸe fÃ¼r den Namen */
+  font-size: 82px !important; /* Feste GrÃƒÂ¶ÃƒÅ¸e fÃƒÂ¼r den Namen */
   line-height: 90px !important;
 }
 
@@ -897,7 +847,7 @@ aside[aria-label="Main"],
   flex-shrink: 0 !important;
 }
 
-/* Background hinter den Lyrics â€” komplett weg */
+/* Background hinter den Lyrics Ã¢â‚¬â€ komplett weg */
 .lyrics-lyrics-background,
 .lyrics-lyricsContainer-background,
 [class*="lyrics_background"],
@@ -909,7 +859,7 @@ aside[aria-label="Main"],
   display: none !important;
 }
 
-/* â”€â”€ LYRICS POSITIONIERUNG (ROTER KASTEN) â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ LYRICS POSITIONIERUNG (ROTER KASTEN) Ã¢â€â‚¬Ã¢â€â‚¬ */
 .lyrics-lyricsContainer-LyricsContainer,
 [data-testid="lyrics-container"],
 [class*="lyricsContainer"],
@@ -951,7 +901,7 @@ body:has(.lyrics-lyricsContainer-LyricsContainer) .lyrics-lyricsContainer-Lyrics
   height: 60vh !important;
 }
 
-/* Radikaler Background-Killer fÃ¼r Lyrics-Ansicht */
+/* Radikaler Background-Killer fÃƒÂ¼r Lyrics-Ansicht */
 body.ag-lyrics-active [data-testid="lyrics-fullscreen-cinema"] > div:first-child,
 body.ag-lyrics-active .lyrics-lyricsContainer-LyricsBackground,
 body.ag-lyrics-active [class*="LyricsBackground"],
@@ -968,7 +918,7 @@ body.ag-lyrics-active .main-lyrics-background,
   backdrop-filter: none !important;
 }
 
-/* WICHTIG: Spotify rendert neuerdings oft ein <canvas> fÃ¼r den blur-Hintergrund! */
+/* WICHTIG: Spotify rendert neuerdings oft ein <canvas> fÃƒÂ¼r den blur-Hintergrund! */
 body.ag-lyrics-active canvas,
 [data-testid="lyrics-fullscreen-cinema"] canvas,
 .lyrics-lyricsContainer-LyricsBackground canvas {
@@ -1004,7 +954,7 @@ body.ag-lyrics-active canvas,
   visibility: visible !important;
 }
 
-/* Lyrics-Lines â€” grÃ¶ÃŸer, gut lesbar */
+/* Lyrics-Lines Ã¢â‚¬â€ grÃƒÂ¶ÃƒÅ¸er, gut lesbar */
 .lyrics-lyrics-active,
 .lyrics-lyrics-line.active,
 [class*="lyrics_active"],
@@ -1012,7 +962,7 @@ body.ag-lyrics-active canvas,
   color: #FFFFFF !important;
   text-shadow: 0 0 20px rgba(123, 95, 219, 0.6), 0 2px 8px rgba(0, 0, 0, 0.8) !important;
   font-weight: 600 !important;
-  font-size: 28px !important; /* Etwas grÃ¶ÃŸer fÃ¼r den Red Box Bereich */
+  font-size: 28px !important; /* Etwas grÃƒÂ¶ÃƒÅ¸er fÃƒÂ¼r den Red Box Bereich */
 }
 
 .lyrics-lyrics-line,
@@ -1037,7 +987,7 @@ body.ag-lyrics-active canvas,
   background-color: transparent !important;
 }
 
-/* â”€â”€ 11. FLOATING PILL PLAYER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 11. FLOATING PILL PLAYER Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 .main-nowPlayingBar-container {
   background: none !important;
@@ -1168,7 +1118,7 @@ button:has(svg path[d^="M10.5 3L16.5428"])~button:has(svg path[d^="M10.5 3L16.54
 button:has(svg path[d^="M16 3C16.5523"])+button:has(svg path[d^="M16 3C16.5523"]),
 button:has(svg path[d^="M16 3C16.5523"])~button:has(svg path[d^="M16 3C16.5523"]) { display: none !important; }
 
-/* â”€â”€ 12. CARDS, ROWS, MENU, RIGHT SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 12. CARDS, ROWS, MENU, RIGHT SIDEBAR Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 .main-card-card { background-color: transparent !important; transition: transform 0.3s ease !important; overflow: visible !important; }
 .main-card-imageContainer { position: relative !important; overflow: visible !important; }
@@ -1194,7 +1144,7 @@ button:has(svg path[d^="M16 3C16.5523"])~button:has(svg path[d^="M16 3C16.5523"]
 }
 .main-card-imageContainer [style*="background-color"] { border-radius: 0 0 12px 12px !important; }
 
-/* â”€â”€ HOME SHORTCUTS: Rounded & Magnification â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ HOME SHORTCUTS: Rounded & Magnification Ã¢â€â‚¬Ã¢â€â‚¬ */
 .view-homeShortcutsGrid-shortcut {
     border-radius: 16px !important;
     overflow: hidden !important;
@@ -1269,9 +1219,9 @@ img.view-homeShortcutsGrid-equaliserImage {
 [data-testid="context-menu"] li { border-radius: 8px !important; transition: all 0.18s !important; }
 [data-testid="context-menu"] li:hover { background: rgba(123,95,219,0.16) !important; }
 
-/* â”€â”€ 12. RIGHT SIDEBAR â€” THE ULTIMATE GLASS REDESIGN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 12. RIGHT SIDEBAR Ã¢â‚¬â€ THE ULTIMATE GLASS REDESIGN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
-/* 1. Radikaler Background-Killer fÃ¼r die gesamte Sidebar */
+/* 1. Radikaler Background-Killer fÃƒÂ¼r die gesamte Sidebar */
 .Root__right-sidebar,
 [data-testid="right-sidebar"],
 aside[data-testid="right-sidebar"],
@@ -1290,15 +1240,15 @@ aside[data-testid="right-sidebar"],
   border: none !important;
 }
 
-/* 2. Die schwebende Haupt-Card â€” Jetzt nach unten versetzt */
+/* 2. Die schwebende Haupt-Card Ã¢â‚¬â€ Jetzt nach unten versetzt */
 .Root__right-sidebar {
   background: rgba(10, 8, 22, 0.35) !important;
   backdrop-filter: blur(45px) saturate(200%) brightness(1.1) !important;
   -webkit-backdrop-filter: blur(45px) saturate(200%) brightness(1.1) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 28px 28px 0 0 !important; /* Unten eckig fÃ¼r Anschluss an Rand */
+  border-radius: 28px 28px 0 0 !important; /* Unten eckig fÃƒÂ¼r Anschluss an Rand */
   margin: 15px 15px 0 5px !important;
-  height: calc(100% - 15px) !important; /* Volle HÃ¶he ab Startpunkt */
+  height: calc(100% - 15px) !important; /* Volle HÃƒÂ¶he ab Startpunkt */
   align-self: flex-end !important;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4) !important;
   overflow: hidden !important;
@@ -1306,7 +1256,7 @@ aside[data-testid="right-sidebar"],
   z-index: 100 !important;
 }
 
-/* 3. Artist-Card & About the Artist â€” KOMPLETT WEG */
+/* 3. Artist-Card & About the Artist Ã¢â‚¬â€ KOMPLETT WEG */
 .main-nowPlayingView-aboutArtistV2,
 [class*="aboutArtistV2"],
 [data-testid="about-the-artist-card"],
@@ -1321,7 +1271,7 @@ button:has([class*="aboutArtistV2"]),
   padding: 0 !important;
 }
 
-/* Lila Reste in der Sidebar endgÃ¼ltig killen */
+/* Lila Reste in der Sidebar endgÃƒÂ¼ltig killen */
 [class*="aboutArtistV2"] *,
 .main-nowPlayingView-section *,
 [data-testid="right-sidebar"] * {
@@ -1378,7 +1328,7 @@ button:has([class*="aboutArtistV2"]),
   padding: 16px !important;
 }
 
-/* â”€â”€ APP REGION FIX FOR TOP BAR BUTTONS (MARKETPLACE ETC) â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ APP REGION FIX FOR TOP BAR BUTTONS (MARKETPLACE ETC) Ã¢â€â‚¬Ã¢â€â‚¬ */
 .Root__top-bar button,
 .main-topBar-container button,
 [class*="marketplace"] button,
@@ -1416,7 +1366,7 @@ div[data-overlayscrollbars-viewport~="scrollbarHidden"] {
 
 #ag-blobs { z-index: 0 !important; }
 
-/* â”€â”€ 13. STICKY HEADER DEAKTIVIEREN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 13. STICKY HEADER DEAKTIVIEREN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 /* Verhindert, dass "Titel, Album, Datum" beim Scrollen am oberen Rand kleben bleiben */
 .main-trackList-trackListHeaderRow,
 .main-trackList-trackListHeader,
@@ -1429,13 +1379,13 @@ div[data-overlayscrollbars-viewport~="scrollbarHidden"] {
   box-shadow: none !important;
 }
 
-/* Fallback fÃ¼r neuere Spotify-Versionen */
+/* Fallback fÃƒÂ¼r neuere Spotify-Versionen */
 [class*="trackListHeader"] {
   position: static !important;
 }
 
 
-/* â”€â”€ 14. MODERN ADDITIONS (SAFE ZONE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 14. MODERN ADDITIONS (SAFE ZONE) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 #ag-home-cluster:hover .ag-cluster-artists {
   opacity: 1 !important; pointer-events: auto !important; 
   transform: translateX(calc(-50% + 120px)) scale(1) rotate(0deg) !important; filter: blur(0px);
@@ -1447,7 +1397,7 @@ div[data-overlayscrollbars-viewport~="scrollbarHidden"] {
   transition: all 0.5s cubic-bezier(0.34, 1.8, 0.64, 1) 0.09s;
 }
 
-/* â”€â”€ 15. LIBRARY PANEL STYLING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 15. LIBRARY PANEL STYLING Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 #ag-lib-panel-header {
   padding: 24px;
@@ -1509,7 +1459,7 @@ div[data-overlayscrollbars-viewport~="scrollbarHidden"] {
   border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* â”€â”€ 16. ENTRANCE ANIMATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 16. ENTRANCE ANIMATIONS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 @keyframes ag-soft-drop {
   0% { transform: translateX(-50%) translateY(-150px) scale(0.8); opacity: 0; }
@@ -1798,7 +1748,7 @@ input[type="checkbox"]::after {
 }
 input[type="checkbox"]:checked::after { transform: translateX(16px) !important; }
 
-/* â”€â”€ 16. ARTIST PAGE: YOU LIKED FIX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 16. ARTIST PAGE: YOU LIKED FIX Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 [class*="ArtistPage__youLiked"] {
   display: flex !important;
   flex-direction: row !important;
@@ -1859,7 +1809,7 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
   margin: 0 !important;
 }
 
-/* â”€â”€ 17. MARKETPLACE: DROPDOWN TO CATEGORY TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 17. MARKETPLACE: DROPDOWN TO CATEGORY TABS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 .marketplace-header {
   display: flex !important;
   flex-direction: column !important;
@@ -1918,7 +1868,7 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
     margin-top: 10px !important;
 }
 
-/* â”€â”€ 18. CONTEXT MENU POSITIONING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ 18. CONTEXT MENU POSITIONING Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 .ag-user-menu {
     transform: translateX(85px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
@@ -1934,7 +1884,8 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
 
  / *    % %  1 9 .   N O T I F I C A T I O N S   R E P O S I T I O N I N G    % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %  * / 
  . m a i n - n o t i f i c a t i o n B u b b l e - c o n t a i n e r , 
- [ c l a s s * = \  
+ [ c l a s s * = \ 
+ 
  n o t i f i c a t i o n B u b b l e - c o n t a i n e r \ ]   { 
          b o t t o m :   1 1 0 p x   ! i m p o r t a n t ; 
          z - i n d e x :   1 0 0 0 0 2   ! i m p o r t a n t ; 
@@ -1948,7 +1899,8 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
          b o r d e r - r a d i u s :   1 2 p x   ! i m p o r t a n t ; 
          b o x - s h a d o w :   0   1 0 p x   3 0 p x   r g b a ( 0 ,   0 ,   0 ,   0 . 5 )   ! i m p o r t a n t ; 
          c o l o r :   # f f f   ! i m p o r t a n t ; 
- }  
+ } 
+ 
  
  / *    % %  2 0 .   M A R K E T P L A C E   I M P R O V E M E N T S    % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %  * / 
  # a g - m a r k e t p l a c e - t a b s   { 
@@ -1992,7 +1944,8 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
  . m a r k e t p l a c e - h e a d e r _ _ s e a r c h - c o n t a i n e r   s e l e c t   { 
          d i s p l a y :   n o n e   ! i m p o r t a n t ; 
  } 
-  
+ 
+ 
  
  / *    % %  2 1 .   M A R K E T P L A C E   H I T B O X   F I X    % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %  * / 
  # a g - m a r k e t p l a c e - t a b s   { 
@@ -2023,7 +1976,8 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
          p o s i t i o n :   a b s o l u t e   ! i m p o r t a n t ; 
          p o i n t e r - e v e n t s :   n o n e   ! i m p o r t a n t ; 
  } 
-  
+ 
+ 
  
  / *   - - -   2 2 .   M A R K E T P L A C E   T A B S   V I S I B I L I T Y   F I X   - - -   * / 
  # a g - m a r k e t p l a c e - t a b s   { 
@@ -2072,11 +2026,12 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
  . m a r k e t p l a c e - h e a d e r   { 
          o v e r f l o w :   v i s i b l e   ! i m p o r t a n t ; 
  } 
-  
+ 
+ 
  
 /* --- 26. MARKETPLACE TABBAR FIX (ULTRA VISIBILITY) --- */
 .marketplace-tabBar-headerItemLink, 
-[class*=\"marketplace-tabBar-headerItemLink\"] {
+[class*="marketplace-tabBar-headerItemLink"] {
     display: inline-block !important;
     visibility: visible !important;
     opacity: 1 !important;
@@ -2094,15 +2049,15 @@ input[type="checkbox"]:checked::after { transform: translateX(16px) !important; 
     -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
 }
 
-.marketplace-tabBar-active, [aria-current=\"page\"] {
+.marketplace-tabBar-active, [aria-current="page"] {
     background: linear-gradient(135deg, #7b5fdb, #4f8edb) !important;
     box-shadow: 0 0 25px rgba(123, 95, 219, 0.8) !important;
 }
 
 /* --- 27. MARKETPLACE TOPBAR RESURRECTION --- */
 /* If the parent is opacity 0, children stay invisible. We must wake up the topbar! */
-body:has([id*=\"marketplace\"]) .main-topBar-container,
-body:has([class*=\"marketplace\"]) .main-topBar-container {
+body:has([id*="marketplace"]) .main-topBar-container,
+body:has([class*="marketplace"]) .main-topBar-container {
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: none !important; /* Don't block clicks to things behind it */
@@ -2123,12 +2078,12 @@ body:has([class*=\"marketplace\"]) .main-topBar-container {
 
 /* --- 28. LISTENING STATS GLASS FUSION --- */
 /* Target the main container of the stats extension */
-[id*=\"stats\"], .stats-container, .listening-stats-main {
+[id*="stats"], .stats-container, .listening-stats-main {
     background: transparent !important;
 }
 
 /* Glass Cards for the stats entries */
-.stats-card, .stats-item, [class*=\"stats\"] [class*=\"card\"] {
+.stats-card, .stats-item, [class*="stats"] [class*="card"] {
     background: rgba(255, 255, 255, 0.03) !important;
     backdrop-filter: blur(12px) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -2169,7 +2124,7 @@ body:has([class*=\"marketplace\"]) .main-topBar-container {
 /* --- 29. LISTENING STATS TEXT CONTRAST FIX --- */
 /* Fix for the Tabs (Today, 4 Weeks, etc.) */
 .stats-container button, 
-[class*=\"stats\"] button,
+[class*="stats"] button,
 .stats-tab-bar button {
     color: #ffffff !important;
     font-weight: 600 !important;
@@ -2182,9 +2137,9 @@ body:has([class*=\"marketplace\"]) .main-topBar-container {
     text-shadow: 0 0 8px rgba(255,255,255,0.5) !important;
 }
 
-/* Fix for the Green \"Next\"/\"Skip\" buttons (make text dark for contrast) */
-button[style*=\"background-color: rgb(30, 215, 96)\"],
-button[style*=\"background-color: #1ed760\"],
+/* Fix for the Green "Next"/"Skip" buttons (make text dark for contrast) */
+button[style*="background-color: rgb(30, 215, 96)"],
+button[style*="background-color: #1ed760"],
 .stats-button-primary {
     color: #000000 !important;
     font-weight: 800 !important;
@@ -2200,9 +2155,9 @@ button[style*=\"background-color: #1ed760\"],
 
 /* 1. UNIVERSAL MARKETPLACE BUTTON FIX */
 body:has(.marketplace-header) .main-topBar-container,
-body:has([id*=\"marketplace\"]) .main-topBar-container,
+body:has([id*="marketplace"]) .main-topBar-container,
 body:has(.marketplace-tabBar) .main-topBar-container,
-body:has([class*=\"marketplace\"]) .main-topBar-container {
+body:has([class*="marketplace"]) .main-topBar-container {
     opacity: 1 !important;
     visibility: visible !important;
     display: flex !important;
@@ -2215,12 +2170,12 @@ body:has([class*=\"marketplace\"]) .main-topBar-container {
 }
 
 /* 2. DROPDOWN & SUBMENU REPAIR */
-div[role=\"menu\"], .main-contextMenu-menu, .main-userWidget-menu {
+div[role="menu"], .main-contextMenu-menu, .main-userWidget-menu {
     translate: 0 0 !important;
     overflow: visible !important;
 }
 .main-userWidget-menu { margin-top: 10px !important; margin-right: 10px !important; }
-div[role=\"menu\"] div[role=\"menu\"], .main-contextMenu-submenu {
+div[role="menu"] div[role="menu"], .main-contextMenu-submenu {
     display: block !important; opacity: 1 !important; visibility: visible !important;
     z-index: 1000000 !important; position: absolute !important;
 }
@@ -2238,7 +2193,7 @@ div[role=\"menu\"] div[role=\"menu\"], .main-contextMenu-submenu {
 }
 
 /* 4. CLEANUP: No shadow on Artist/Album images */
-.main-entityHeader-imageContainer, .main-entityHeader-image, [data-testid=\"entity-image\"] {
+.main-entityHeader-imageContainer, .main-entityHeader-image, [data-testid="entity-image"] {
     box-shadow: none !important;
 }
 
@@ -2250,7 +2205,7 @@ div[role=\"menu\"] div[role=\"menu\"], .main-contextMenu-submenu {
 .main-type-mesto,
 .main-type-ballad,
 .main-entityHeader-subtitle,
-[class*=\"Text-subdued\"] {
+[class*="Text-subdued"] {
     color: rgba(255, 255, 255, 0.7) !important; /* Sanftes Wei fr Meta-Texte */
 }
 
@@ -2269,3 +2224,221 @@ h1, h2, h3, h4, h5, h6,
     background-image: none !important;
 }
 
+
+/* --- MARKETPLACE HEADER POSITION FIX --- */
+.marketplace-header { position: relative !important; background: transparent !important; }
+.marketplace-tabBar { position: relative !important; background: transparent !important; }
+
+/* --- FINAL TOPBAR & MARKETPLACE SCROLL FIX --- */
+/* 1. Topbar radikal transparent machen */
+.main-topBar-container, 
+.main-topBar-background, 
+.main-topBar-overlay,
+header.main-topBar-container {
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+/* 2. Marketplace Header & Buttons zum Mitscrollen zwingen (nicht kleben!) */
+.marketplace-header, 
+.marketplace-tabBar,
+.marketplace-tabBar-headerItem {
+    position: relative !important; /* Verhindert das Festkleben am oberen Rand */
+    background: transparent !important;
+    top: auto !important;
+}
+
+/* 3. Klickbarkeit sicherstellen */
+.main-topBar-container {
+    pointer-events: none !important;
+}
+.main-topBar-container button, 
+.main-topBar-container a, 
+.marketplace-tabBar a {
+    pointer-events: auto !important;
+}
+
+/* --- TABBAR SCROLL-AWAY FIX --- */
+/* Wir zwingen die Tabbar, sich wie normaler Text zu verhalten, der nach oben wegrollt */
+.marketplace-tabBar, 
+.marketplace-tabBar-nav,
+.marketplace-header {
+    position: absolute !important; /* Absolut zum Start der Seite */
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    z-index: 1 !important;
+    background: transparent !important;
+}
+
+/* Wir sorgen dafr, dass der Content darunter nicht berdeckt wird */
+.marketplace-header {
+    padding-top: 60px !important; 
+}
+
+/* --- FORCE MARKETPLACE VISIBILITY --- */
+.marketplace-tabBar, 
+.marketplace-tabBar-nav, 
+.marketplace-tabBar-header,
+.marketplace-tabBar-headerItem,
+.marketplace-tabBar-headerItemLink {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* Fix fr den schwarzen Balken / Header */
+.main-topBar-container, .main-topBar-background, .main-topBar-overlay {
+    background: transparent !important;
+}
+
+/* --- MARKETPLACE BEAUTIFY (CENTER TABS) --- */
+.marketplace-tabBar-header {
+    display: flex !important;
+    justify-content: center !important; /* Macht die Buttons mittig */
+    align-items: center !important;
+    width: 100% !important;
+    gap: 12px !important;
+    margin-
+}
+
+/* --- PLAYLIST GLASS PERFECTION --- */
+/* Wir machen alle Container, die Spotify fr Hintergrnde nutzt, restlos transparent */
+.main-view-container__scroll-node-child,
+.main-actionBarBackground-background,
+[style*=\"background-color: var(--spice-main)\"],
+[style*=\"background-color:var(--spice-main)\"] {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+/* Fokus-Overlay in Playlisten entfernen */
+.main-trackList-trackListRow:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+.main-trackList-trackListRow--active {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* --- MARKETPLACE LAYOUT REPAIR --- */
+/* 1. Header tiefer setzen (Sort by nach unten rcken) */
+.marketplace-header {
+    padding-top: 120px !important; 
+    margin-bottom: 40px !important;
+    position: relative !important;
+}
+
+/* 2. Dropdown (More) Button komplett entfernen */
+.marketplace-tabBar-headerItem[data-tab=\"More\"],
+button[aria-label=\"More\"],
+.main-type-mestoBold:contains(\"More\") {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* 3. Alle Tabs (Extensions, Themes etc.) ZWINGEN zu erscheinen */
+.marketplace-tabBar-headerItem {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* 4. TabBar zentrieren und Luft geben */
+.marketplace-tabBar-header {
+    justify-content: center !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 15px !important;
+}
+
+/* MARKETPLACE SEARCH REMOVAL */
+.marketplace-header__search-container { display: none !important; }
+
+/* ULTIMATE MARKETPLACE SEARCH KILL */
+.marketplace-header__search-container,
+.marketplace-header__controls input,
+.marketplace-header__controls [class*="search"],
+.SearchInput { 
+    display: none !important; 
+    visibility: hidden !important; 
+    width: 0 !important; 
+    height: 0 !important; 
+    margin: 0 !important; 
+    padding: 0 !important; 
+}
+
+
+
+/* --- CONNECT PILL DESIGN --- */
+#ag-connect-pill {
+    position: relative !important;
+    background: rgba(123, 95, 219, 0.3) !important;
+    backdrop-filter: blur(15px) !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 2px 15px !important;
+    height: 32px !important;
+    width: auto !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+.main-connectBar-connectBar span { font-size: 11px !important; font-weight: bold !important; color: white !important; }
+.main-connectBar-connectBar button { display: none !important; } /* Clean look */
+
+#ag-home-cluster {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    position: fixed !important;
+    
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 1000 !important;
+}
+
+
+/* --- FLOATING JAM PILL (BOTTOM DOCK) --- */
+#ag-jam-floating-pill {
+    position: fixed !important;
+    bottom: 110px !important; /* ber dem Player */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: rgba(123, 95, 219, 0.5) !important;
+    backdrop-filter: blur(15px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    padding: 8px 25px !important;
+    border-radius: 30px !important;
+    font-size: 13px !important;
+    font-weight: bold !important;
+    z-index: 9999 !important;
+    cursor: pointer !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+    display: none;
+    transition: all 0.3s ease !important;
+}
+#ag-jam-floating-pill:hover {
+    background: rgba(123, 95, 219, 0.7) !important;
+    transform: translateX(-50%) scale(1.05) !important;
+}
+
+/* --- UI OVERLAPPING & NOTIFICATIONS --- */
+#ag-centered-search {
+    z-index: 50 !important; /* Niedriger, damit Popups drber gehen */
+}
+
+/* Popups/Modals IMMER ganz nach oben */
+#global-modal, .GenericModal__overlay, div[role="dialog"] {
+    z-index: 99999 !important;
+}
+
+/* Notifications ber die Now Playing Bar schieben */
+.main-notificationBubble-container {
+    bottom: 180px !important; /* Schn weit oben */
+    z-index: 100000 !important;
+}
+\n#ag-jam-floating-pill { z-index: 1000000 !important; pointer-events: auto !important; }\n
