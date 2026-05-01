@@ -42,6 +42,44 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   let _layoutDraft = null;
   let _layoutFrame = 0;
   let _layoutDragging = false;
+  let _visibilityFrame = 0;
+  let _runtimeTimers = { light: 0, full: 0, menu: 0, dock: 0, jam: 0 };
+  let _dockButtonsCache = [];
+  let _dockButtonsDirty = true;
+  let _lastAppliedLayoutSignature = '';
+  let _lastVisibilitySignature = '';
+  const HITBOX_STYLE_TEXT = `
+      #ag-side-dock { display: contents !important; }
+      .ag-dock-hitbox {
+        position: fixed !important;
+        z-index: 70;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
+        cursor: pointer;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        color: #fff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+      .ag-dock-hitbox:hover {
+        background: rgba(255,255,255,0.15) !important;
+        border-color: rgba(255,255,255,0.2) !important;
+        box-shadow: 0 0 20px rgba(123,95,219,0.3);
+      }
+      .ag-dock-hitbox svg { width: 20px; height: 20px; color: #fff; opacity: 0.82; }
+      .ag-dock-hitbox img { width: 34px !important; height: 34px !important; border-radius: 50% !important; object-fit: cover !important; }
+      .main-contextMenu-tippy,
+      [data-tippy-root]:has(.main-contextMenu-menu),
+      body:has(.main-contextMenu-menu) .main-contextMenu-menu { z-index: 100000 !important; }
+    `;
 
   function cloneLayout(layout = DEFAULT_LAYOUT) {
     return JSON.parse(JSON.stringify(layout));
@@ -82,25 +120,61 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     return Math.abs(left - centeredLeft) <= threshold ? centeredLeft : left;
   }
 
+  function setStyleIfChanged(el, prop, value, priority = '') {
+    if (!el) return;
+    if (el.style.getPropertyValue(prop) === value && el.style.getPropertyPriority(prop) === priority) return;
+    if (priority) el.style.setProperty(prop, value, priority);
+    else el.style.setProperty(prop, value);
+  }
+
+  function queueVisibilityUpdate() {
+    if (_visibilityFrame) return;
+    _visibilityFrame = requestAnimationFrame(() => {
+      _visibilityFrame = 0;
+      updateVisibility();
+    });
+  }
+
+  function scheduleRuntimeFix(mode = 'light', delay = 0) {
+    clearTimeout(_runtimeTimers[mode]);
+    _runtimeTimers[mode] = setTimeout(() => {
+      _runtimeTimers[mode] = 0;
+      runRuntimeFixes(mode);
+    }, delay);
+  }
+
+  function markDockDirty() {
+    _dockButtonsDirty = true;
+  }
+
   function applyLayout(layout = getLayout()) {
     document.body?.classList.toggle('ag-layout-custom', !!localStorage.getItem('ag-layout') || _layoutEditMode);
+    const pinHomeTop = !_layoutEditMode && getMainScrollY() > 12;
+    const signature = [
+      _layoutEditMode ? 'edit' : 'live',
+      pinHomeTop ? 'pinned' : 'free',
+      layout.homeCluster.x, layout.homeCluster.y,
+      layout.search.x, layout.search.y,
+      layout.nowPlaying.x, layout.nowPlaying.y
+    ].join('|');
+    if (signature === _lastAppliedLayoutSignature) return;
+    _lastAppliedLayoutSignature = signature;
     const cluster = document.getElementById('ag-home-cluster');
     if (cluster) {
-      const pinHomeTop = !_layoutEditMode && getMainScrollY() > 12;
-      cluster.style.setProperty('left', pinHomeTop ? '50%' : `${layout.homeCluster.x}%`, 'important');
-      cluster.style.setProperty('top', pinHomeTop ? '60px' : `${layout.homeCluster.y}%`, 'important');
-      cluster.style.setProperty('right', 'auto', 'important');
-      cluster.style.setProperty('bottom', 'auto', 'important');
-      cluster.style.setProperty('width', '340px', 'important');
-      cluster.style.setProperty('height', '92px', 'important');
-      cluster.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+      setStyleIfChanged(cluster, 'left', pinHomeTop ? '50%' : `${layout.homeCluster.x}%`, 'important');
+      setStyleIfChanged(cluster, 'top', pinHomeTop ? '60px' : `${layout.homeCluster.y}%`, 'important');
+      setStyleIfChanged(cluster, 'right', 'auto', 'important');
+      setStyleIfChanged(cluster, 'bottom', 'auto', 'important');
+      setStyleIfChanged(cluster, 'width', '340px', 'important');
+      setStyleIfChanged(cluster, 'height', '92px', 'important');
+      setStyleIfChanged(cluster, 'transform', 'translate(-50%, -50%)', 'important');
     }
 
     const search = document.getElementById('ag-centered-search');
     if (search) {
-      search.style.left = `${layout.search.x}%`;
-      search.style.top = `${layout.search.y}%`;
-      search.style.transform = 'translate(-50%, -50%) scale(1)';
+      setStyleIfChanged(search, 'left', `${layout.search.x}%`);
+      setStyleIfChanged(search, 'top', `${layout.search.y}%`);
+      setStyleIfChanged(search, 'transform', 'translate(-50%, -50%) scale(1)');
     }
 
     const nowPlaying = document.querySelector('.Root__now-playing-bar');
@@ -111,10 +185,10 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
     const jamPill = document.getElementById('ag-jam-floating-pill');
     if (jamPill) {
-      jamPill.style.setProperty('left', `${layout.nowPlaying.x}%`, 'important');
-      jamPill.style.setProperty('top', `calc(${layout.nowPlaying.y}% - 68px)`, 'important');
-      jamPill.style.setProperty('bottom', 'auto', 'important');
-      jamPill.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+      setStyleIfChanged(jamPill, 'left', `${layout.nowPlaying.x}%`, 'important');
+      setStyleIfChanged(jamPill, 'top', `calc(${layout.nowPlaying.y}% - 68px)`, 'important');
+      setStyleIfChanged(jamPill, 'bottom', 'auto', 'important');
+      setStyleIfChanged(jamPill, 'transform', 'translate(-50%, -50%)', 'important');
     }
 
     document.body?.classList.remove('ag-sidebar-on-left', 'ag-sidebar-on-right');
@@ -288,7 +362,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     if (!target.closest('.Root__main-view')) return;
     const y = Math.max(target.scrollTop || 0, getMainScrollY());
     _lastScrollY = y;
-    updateVisibility();
+    queueVisibilityUpdate();
   }
 
   function triggerStartupAnimation() {
@@ -580,40 +654,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     if (!style) {
       style = document.createElement('style');
       style.id = 'ag-hitbox-style';
+      style.textContent = HITBOX_STYLE_TEXT;
       document.head.appendChild(style);
     }
-    style.textContent = `
-      #ag-side-dock { display: contents !important; }
-      .ag-dock-hitbox {
-        position: fixed !important;
-        z-index: 70;
-        width: 44px !important;
-        height: 44px !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        transform: none !important;
-        cursor: pointer;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        color: #fff !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-      }
-      .ag-dock-hitbox:hover {
-        background: rgba(255,255,255,0.15) !important;
-        border-color: rgba(255,255,255,0.2) !important;
-        box-shadow: 0 0 20px rgba(123,95,219,0.3);
-      }
-      .ag-dock-hitbox svg { width: 20px; height: 20px; color: #fff; opacity: 0.82; }
-      .ag-dock-hitbox img { width: 34px !important; height: 34px !important; border-radius: 50% !important; object-fit: cover !important; }
-      .main-contextMenu-tippy,
-      [data-tippy-root]:has(.main-contextMenu-menu),
-      body:has(.main-contextMenu-menu) .main-contextMenu-menu { z-index: 100000 !important; }
-    `;
 
     if (!document.getElementById('ag-side-dock')) {
       const dock = document.createElement('div');
@@ -633,7 +676,10 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     }
   }
 
-  function getDockButtons() {
+  function getDockButtons(force = false) {
+    if (!force && !_dockButtonsDirty && _dockButtonsCache.length && _dockButtonsCache.every(entry => entry?.original?.isConnected)) {
+      return _dockButtonsCache;
+    }
     const badText = /back|forward|zur.ck|vorw.rts|previous|next/i;
     const rail = Array.from(document.querySelectorAll('button, a'))
       .map(el => ({ el, rect: el.getBoundingClientRect(), label: `${el.getAttribute('aria-label') || ''} ${el.title || ''} ${el.textContent || ''}` }))
@@ -658,7 +704,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     };
     add('market', document.getElementById('marketplace-extension-button') || document.querySelector('button[aria-label*="Marketplace"], button[title*="Marketplace"]'), svg(ICONS.cart, { size: 18 }));
     add('stats', document.getElementById('stats-extension-button') || document.querySelector('.stats-button') || document.querySelector('button[aria-label*="Stat"], button[title*="Stat"]'), svg(ICONS.stats, { size: 18 }));
-    return rail.slice(0, 5);
+    _dockButtonsCache = rail.slice(0, 5);
+    _dockButtonsDirty = false;
+    return _dockButtonsCache;
   }
 
   function dockButtonHtml(original, index) {
@@ -863,12 +911,12 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
     if (_layoutEditMode) {
       applyLayout(layout);
-      search.style.opacity = '1';
-      search.style.visibility = 'visible';
-      search.style.pointerEvents = 'auto';
-      cluster.style.opacity = '1';
-      cluster.style.visibility = 'visible';
-      cluster.style.pointerEvents = 'auto';
+      setStyleIfChanged(search, 'opacity', '1');
+      setStyleIfChanged(search, 'visibility', 'visible');
+      setStyleIfChanged(search, 'pointer-events', 'auto');
+      setStyleIfChanged(cluster, 'opacity', '1');
+      setStyleIfChanged(cluster, 'visibility', 'visible');
+      setStyleIfChanged(cluster, 'pointer-events', 'auto');
       if (!_layoutDragging) scheduleLayoutEditorFrame(false);
       return;
     }
@@ -885,50 +933,60 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
                    !!document.querySelector('.stats-header');
     const isModal = isModalOpen();
     const shouldHide = !_layoutEditMode && (isFull || isNarrow || isModal);
+    const y = getMainScrollY();
+    const o = shouldHide ? 0 : Math.max(0, 1 - y / 360);
+    const hidden = shouldHide || o < 0.05;
+    const pinHomeTop = shouldHide || y > 12;
+    const visibilitySignature = [
+      shouldHide ? 1 : 0,
+      pinHomeTop ? 1 : 0,
+      Math.round(o * 100),
+      Math.min(Math.round(y * 0.18), 80),
+      path
+    ].join('|');
+    if (visibilitySignature === _lastVisibilitySignature) return;
+    _lastVisibilitySignature = visibilitySignature;
 
     if (shouldHide) {
-      search.style.opacity = '0';
-      search.style.visibility = 'hidden';
-      search.style.pointerEvents = 'none';
-      cluster.style.opacity = '1';
-      cluster.style.visibility = 'visible';
-      cluster.style.pointerEvents = 'auto';
-      cluster.style.setProperty('left', '50%', 'important');
-      cluster.style.setProperty('top', isNarrow ? '60px' : '60px', 'important');
-      cluster.style.setProperty('right', 'auto', 'important');
-      cluster.style.setProperty('bottom', 'auto', 'important');
-      cluster.style.setProperty('width', '340px', 'important');
-      cluster.style.setProperty('height', '92px', 'important');
-      cluster.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+      setStyleIfChanged(search, 'opacity', '0');
+      setStyleIfChanged(search, 'visibility', 'hidden');
+      setStyleIfChanged(search, 'pointer-events', 'none');
+      setStyleIfChanged(cluster, 'opacity', '1');
+      setStyleIfChanged(cluster, 'visibility', 'visible');
+      setStyleIfChanged(cluster, 'pointer-events', 'auto');
+      setStyleIfChanged(cluster, 'left', '50%', 'important');
+      setStyleIfChanged(cluster, 'top', '60px', 'important');
+      setStyleIfChanged(cluster, 'right', 'auto', 'important');
+      setStyleIfChanged(cluster, 'bottom', 'auto', 'important');
+      setStyleIfChanged(cluster, 'width', '340px', 'important');
+      setStyleIfChanged(cluster, 'height', '92px', 'important');
+      setStyleIfChanged(cluster, 'transform', 'translate(-50%, -50%)', 'important');
     } else {
-      const y = getMainScrollY();
-      const o = Math.max(0, 1 - y / 360);
-      const hidden = o < 0.05;
-      search.style.opacity = String(o);
-      search.style.visibility = hidden ? 'hidden' : 'visible';
-      search.style.pointerEvents = o < 0.1 ? 'none' : 'auto';
-      search.style.left = `${layout.search.x}%`;
-      search.style.top = `${layout.search.y}%`;
-      search.style.transform = `translate(-50%, -50%) translateY(-${Math.min(y * 0.18, 80)}px) scale(1)`;
-      cluster.style.opacity = '1';
-      cluster.style.visibility = 'visible';
-      cluster.style.pointerEvents = 'auto';
+      setStyleIfChanged(search, 'opacity', String(o));
+      setStyleIfChanged(search, 'visibility', hidden ? 'hidden' : 'visible');
+      setStyleIfChanged(search, 'pointer-events', o < 0.1 ? 'none' : 'auto');
+      setStyleIfChanged(search, 'left', `${layout.search.x}%`);
+      setStyleIfChanged(search, 'top', `${layout.search.y}%`);
+      setStyleIfChanged(search, 'transform', `translate(-50%, -50%) translateY(-${Math.min(y * 0.18, 80)}px) scale(1)`);
+      setStyleIfChanged(cluster, 'opacity', '1');
+      setStyleIfChanged(cluster, 'visibility', 'visible');
+      setStyleIfChanged(cluster, 'pointer-events', 'auto');
       if (y > 12) {
-        cluster.style.setProperty('left', '50%', 'important');
-        cluster.style.setProperty('top', '60px', 'important');
-        cluster.style.setProperty('right', 'auto', 'important');
-        cluster.style.setProperty('bottom', 'auto', 'important');
-        cluster.style.setProperty('width', '340px', 'important');
-        cluster.style.setProperty('height', '92px', 'important');
-        cluster.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+        setStyleIfChanged(cluster, 'left', '50%', 'important');
+        setStyleIfChanged(cluster, 'top', '60px', 'important');
+        setStyleIfChanged(cluster, 'right', 'auto', 'important');
+        setStyleIfChanged(cluster, 'bottom', 'auto', 'important');
+        setStyleIfChanged(cluster, 'width', '340px', 'important');
+        setStyleIfChanged(cluster, 'height', '92px', 'important');
+        setStyleIfChanged(cluster, 'transform', 'translate(-50%, -50%)', 'important');
       } else {
-        cluster.style.setProperty('left', `${layout.homeCluster.x}%`, 'important');
-        cluster.style.setProperty('top', `${layout.homeCluster.y}%`, 'important');
-        cluster.style.setProperty('right', 'auto', 'important');
-        cluster.style.setProperty('bottom', 'auto', 'important');
-        cluster.style.setProperty('width', '340px', 'important');
-        cluster.style.setProperty('height', '92px', 'important');
-        cluster.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+        setStyleIfChanged(cluster, 'left', `${layout.homeCluster.x}%`, 'important');
+        setStyleIfChanged(cluster, 'top', `${layout.homeCluster.y}%`, 'important');
+        setStyleIfChanged(cluster, 'right', 'auto', 'important');
+        setStyleIfChanged(cluster, 'bottom', 'auto', 'important');
+        setStyleIfChanged(cluster, 'width', '340px', 'important');
+        setStyleIfChanged(cluster, 'height', '92px', 'important');
+        setStyleIfChanged(cluster, 'transform', 'translate(-50%, -50%)', 'important');
       }
     }
   }
@@ -2082,12 +2140,13 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       const style = getComputedStyle(el);
       return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
     };
-    const visibleStartJam = Array.from(document.querySelectorAll('button')).find(btn => {
+    const jamButtonScope = document.querySelectorAll('.Root__right-sidebar button, [data-testid="right-sidebar"] button, [data-testid="queue-page"] button, [role="dialog"] button, .main-connectBar-connectBar button, [class*="connectBar"] button');
+    const visibleStartJam = Array.from(jamButtonScope).find(btn => {
       if (!isVisible(btn)) return false;
       const label = `${btn.textContent || ''} ${btn.getAttribute('aria-label') || ''} ${btn.title || ''}`.trim().toLowerCase();
       return label.includes('start a jam');
     });
-    const visibleEndJam = Array.from(document.querySelectorAll('button')).find(btn => {
+    const visibleEndJam = Array.from(jamButtonScope).find(btn => {
       if (!isVisible(btn)) return false;
       const label = `${btn.textContent || ''} ${btn.getAttribute('aria-label') || ''} ${btn.title || ''}`.trim().toLowerCase();
       return label === 'end' || label.startsWith('end ') || label.includes('jam beenden');
@@ -2195,25 +2254,32 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   function runRuntimeFixes(mode = 'full') {
     if (mode === 'light') {
       agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
-      if (!_layoutEditMode) agSafeRun('updateVisibility', updateVisibility);
-      if (document.querySelector('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content], [data-testid="context-menu"]')) {
+      if (!_layoutEditMode) agSafeRun('queueVisibilityUpdate', queueVisibilityUpdate);
+      const hasMenu = !!document.querySelector('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content], [data-testid="context-menu"]');
+      if (hasMenu) {
         agSafeRun('injectSettingsToMenu', injectSettingsToMenu);
         agSafeRun('fixSubmenuScroll', fixSubmenuScroll);
       }
+      const hasJamUi = !!document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], [data-testid="queue-page"], .main-connectBar-connectBar, [class*="connectBar"], #ag-jam-floating-pill');
+      if (hasJamUi) agSafeRun('updateJamPillLegacy', updateJamPillLegacy);
       return;
     }
     agSafeRun('killTopbar', killTopbar);
     agSafeRun('killResidues', killResidues);
     agSafeRun('healArtistImage', healArtistImage);
     agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
-    if (!_layoutEditMode) agSafeRun('updateVisibility', updateVisibility);
+    if (!_layoutEditMode) agSafeRun('queueVisibilityUpdate', queueVisibilityUpdate);
     agSafeRun('fixFriendsPanel', fixFriendsPanel);
-    agSafeRun('injectSettingsToMenu', injectSettingsToMenu);
+    const hasMenu = !!document.querySelector('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content], [data-testid="context-menu"]');
+    if (hasMenu) {
+      agSafeRun('injectSettingsToMenu', injectSettingsToMenu);
+      agSafeRun('fixSubmenuScroll', fixSubmenuScroll);
+    }
     agSafeRun('fixYouLiked', fixYouLiked);
     agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
-    agSafeRun('fixSubmenuScroll', fixSubmenuScroll);
     agSafeRun('restoreNativeSidebar', restoreNativeSidebar);
-    agSafeRun('updateJamPillLegacy', updateJamPillLegacy);
+    const hasJamUi = !!document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], [data-testid="queue-page"], .main-connectBar-connectBar, [class*="connectBar"], #ag-jam-floating-pill');
+    if (hasJamUi) agSafeRun('updateJamPillLegacy', updateJamPillLegacy);
     agSafeRun('hideMarketplaceSearch', () => {
       const mSearch = document.querySelector(".marketplace-header__search-container");
       if (mSearch) {
@@ -2233,78 +2299,56 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     createHomeCluster(); createSearchOverlay(); createLibraryPanel();
     killTopbar(); killResidues();
     setupSidebarObserver();
-    window.addEventListener('scroll', handleScroll, true);
-    window.addEventListener('resize', updateVisibility);
-    window.addEventListener('pointerdown', () => setTimeout(() => runRuntimeFixes('light'), 80), true);
-    try { Spicetify.Platform.History.listen(() => setTimeout(() => runRuntimeFixes('full'), 120)); } catch {}
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    window.addEventListener('resize', () => {
+      markDockDirty();
+      queueVisibilityUpdate();
+      scheduleRuntimeFix('light', 40);
+    });
+    window.addEventListener('pointerdown', () => {
+      markDockDirty();
+      scheduleRuntimeFix('light', 40);
+    }, true);
+    try { Spicetify.Platform.History.listen(() => {
+      markDockDirty();
+      scheduleRuntimeFix('full', 120);
+    }); } catch {}
     fixFriendsPanel();
     runRuntimeFixes();
-    
-    setInterval(() => { 
-      return runRuntimeFixes('light');
-      try {
-        killTopbar(); killResidues(); healArtistImage(); enforceProfileHitbox();
-        updateVisibility(); fixFriendsPanel(); injectSettingsToMenu();
-        fixYouLiked(); fixMarketplaceDropdown(); fixSubmenuScroll(); syncSidebarCollapse();
-      // --- STABLE JAM & MARKETPLACE FIX ---
-      updateJamPillLegacy();
-      const jamInfo = getActiveJamInfo();
-      const real = jamInfo?.el || { innerText: '', classList: { contains: () => false }, querySelectorAll: () => [], style: { setProperty: () => {} }, className: '' };
-      let pill = document.getElementById("ag-jam-floating-pill");
-      const isJam = real && (real.innerText.toLowerCase().includes("jam") || real.innerText.includes("•") || real.classList.contains("main-connectBar-connected"));
-      
-          if (false && jamInfo) {
-          if (pill?.dataset.agPreview === 'true' && !_layoutEditMode) pill.remove();
-          pill = document.getElementById("ag-jam-floating-pill");
-          if (!pill) {
-              pill = document.createElement("div"); pill.id = "ag-jam-floating-pill";
-              document.body.appendChild(pill);
-              pill.onclick = () => {
-                  const qBtn = document.querySelector('button[aria-label="Queue"]') || document.querySelector('button[data-testid="control-button-queue"]');
-                  if (qBtn) qBtn.click(); else Spicetify.Platform.History.push({ pathname: "/queue" });
-              };
-          }
-          let jamText = jamInfo.text || real?.innerText || '';
-          if (!jamText || jamText.length < 3) {
-              const spans = real?.querySelectorAll('span, div') || [];
-              for (let s of spans) {
-                  if (s.innerText && s.innerText.length > 2 && !s.innerText.includes('Connect')) {
-                      jamText = s.innerText; break;
-                  }
-              }
-          }
-          pill.innerText = (jamText || "Jam Active").replace(/Connect to a device/gi, "").trim();
-          pill.classList.remove('ag-jam-hidden');
-          pill.style.setProperty("display", "inline-flex", "important");
-          pill.style.setProperty("visibility", "visible", "important");
-          pill.style.setProperty("pointer-events", "auto", "important");
-          applyLayout(_layoutEditMode ? (_layoutDraft || getLayout()) : getLayout());
-          if (real?.className && String(real.className).includes('connectBar')) {
-              real.style.setProperty("opacity", "0", "important");
-              real.style.setProperty("pointer-events", "none", "important");
-              real.style.setProperty("height", "0", "important");
-          }
-          document.querySelectorAll(".main-connectBar-connectBar, [class*='connectBar']").forEach(bar => {
-              if ((bar.innerText || '').toLowerCase().includes('jam')) {
-                  bar.style.setProperty("opacity", "0", "important");
-                  bar.style.setProperty("pointer-events", "none", "important");
-                  bar.style.setProperty("height", "0", "important");
-              }
-          });
-      } else if (false && pill && !_layoutEditMode && pill.dataset.agPreview !== 'true') {
-          pill.remove();
-      }
 
-      const mSearch = document.querySelector(".marketplace-header__search-container");
-      if (mSearch) {
-          mSearch.style.setProperty("opacity", "0", "important");
-          mSearch.style.setProperty("pointer-events", "none", "important");
-          mSearch.style.setProperty("height", "0", "important");
+    const observer = new MutationObserver(mutations => {
+      let needsLight = false;
+      let needsFull = false;
+      let needsMenu = false;
+      let needsJam = false;
+      let needsDock = false;
+      for (const mutation of mutations) {
+        if (mutation.type !== 'childList') continue;
+        const touched = [...mutation.addedNodes, ...mutation.removedNodes].filter(node => node?.nodeType === 1);
+        if (!touched.length) continue;
+        needsLight = true;
+        for (const node of touched) {
+          const html = node.outerHTML || '';
+          const text = node.textContent || '';
+          if (html.includes('contextMenu') || html.includes('role="menu"') || text.toLowerCase().includes('find a playlist')) needsMenu = true;
+          if (html.includes('connectBar') || text.toLowerCase().includes('start a jam') || text.toLowerCase().includes(' jam')) needsJam = true;
+          if (html.includes('main-userWidget') || html.includes('marketplace-extension-button') || html.includes('stats-extension-button')) needsDock = true;
+          if (html.includes('buddyFeed') || html.includes('entityHeader') || html.includes('marketplace')) needsFull = true;
+        }
       }
+      if (needsDock) markDockDirty();
+      if (needsLight) scheduleRuntimeFix('light', 50);
+      if (needsMenu) scheduleRuntimeFix('light', 10);
+      if (needsJam) scheduleRuntimeFix('light', 10);
+      if (needsFull) scheduleRuntimeFix('full', 180);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 
-      } catch(e) {}
-    }, 750);
-    setInterval(() => runRuntimeFixes('full'), 5000);
+    setInterval(() => scheduleRuntimeFix('light', 0), 2000);
+    setInterval(() => {
+      markDockDirty();
+      scheduleRuntimeFix('full', 0);
+    }, 12000);
   }
   
   window.AmbientGlass = { safeNavigate, closeLibraryPanel };
