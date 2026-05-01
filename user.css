@@ -2174,6 +2174,11 @@ div[role="menu"], .main-contextMenu-menu, .main-userWidget-menu {
     translate: 0 0 !important;
     overflow: visible !important;
 }
+div[role="menu"].ag-scrollable-submenu,
+.main-contextMenu-menu.ag-scrollable-submenu {
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+}
 .main-userWidget-menu { margin-top: 10px !important; margin-right: 10px !important; }
 /* TOXIC BLOCK REMOVED BY AG-FIX */
 .main-contextMenu-menuItem, .main-contextMenu-menuItemButton { background-color: transparent !important; }
@@ -2438,7 +2443,11 @@ button[aria-label=\"More\"],
     bottom: 180px !important; /* Schn weit oben */
     z-index: 100000 !important;
 }
-\n#ag-jam-floating-pill { z-index: 1000000 !important; pointer-events: auto !important; }\n
+
+#ag-jam-floating-pill {
+    z-index: 1000000 !important;
+    pointer-events: auto !important;
+}
 /* ==========================================================
    AMBIENTGLASS: FINAL MODAL & MARKETPLACE RESCUE (V15)
    ========================================================== */
@@ -2730,4 +2739,163 @@ button[style*="background-color: #1ed760"] [data-encore-id="text"],
     color: #000000 !important;
     -webkit-text-fill-color: #000000 !important;
     text-shadow: none !important;
+}
+
+/* AmbientGlass runtime layout repair. Keep this at the end so old V15 overrides cannot pin the JS layout. */
+#ag-home-cluster {
+  right: auto !important;
+  bottom: auto !important;
+  width: 340px !important;
+  height: 92px !important;
+  pointer-events: auto !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+#ag-home-cluster::before {
+  content: "";
+  position: absolute;
+  inset: -18px -28px;
+  pointer-events: auto;
+  background: transparent;
+}
+
+#ag-home-cluster:hover .ag-cluster-liked,
+#ag-home-cluster:focus-within .ag-cluster-liked,
+#ag-home-cluster.ag-cluster-open .ag-cluster-liked {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translate(calc(-50% - 140px), -50%) scale(1) rotate(0deg) !important;
+  filter: blur(0) !important;
+}
+
+#ag-home-cluster:hover .ag-cluster-albums,
+#ag-home-cluster:focus-within .ag-cluster-albums,
+#ag-home-cluster.ag-cluster-open .ag-cluster-albums {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translate(calc(-50% - 70px), -50%) scale(1) rotate(0deg) !important;
+  filter: blur(0) !important;
+}
+
+#ag-home-cluster:hover .ag-cluster-playlists,
+#ag-home-cluster:focus-within .ag-cluster-playlists,
+#ag-home-cluster.ag-cluster-open .ag-cluster-playlists {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translate(calc(-50% + 70px), -50%) scale(1) rotate(0deg) !important;
+  filter: blur(0) !important;
+}
+
+#ag-home-cluster:hover .ag-cluster-artists,
+#ag-home-cluster:focus-within .ag-cluster-artists,
+#ag-home-cluster.ag-cluster-open .ag-cluster-artists {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translate(calc(-50% + 140px), -50%) scale(1) rotate(0deg) !important;
+  filter: blur(0) !important;
+}
+
+#ag-home-cluster .ag-cluster-btn {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+#ag-home-cluster #ag-home-button {
+  transform: translate(-50%, -50%) scale(1) !important;
+}
+
+#ag-home-cluster .ag-cluster-liked,
+#ag-home-cluster .ag-cluster-albums,
+#ag-home-cluster .ag-cluster-playlists,
+#ag-home-cluster .ag-cluster-artists {
+  transform: translate(-50%, -50%) scale(0.3) !important;
+}
+
+#ag-home-cluster #ag-home-button,
+#ag-home-cluster:hover .ag-cluster-btn,
+#ag-home-cluster:focus-within .ag-cluster-btn,
+#ag-home-cluster.ag-cluster-open .ag-cluster-btn {
+  pointer-events: auto !important;
+}
+
+#ag-home-cluster:hover .ag-cluster-liked,
+#ag-home-cluster:focus-within .ag-cluster-liked,
+#ag-home-cluster.ag-cluster-open .ag-cluster-liked {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translate(calc(-50% - 140px), -50%) scale(1) rotate(0deg) !important;
+  filter: blur(0) !important;
+}
+
+#ag-home-cluster:hover .ag-cluster-albums,
+#ag-home-cluster:focus-within .ag-cluster-albums,
+#ag-home-cluster.ag-cluster-open .ag-cluster-albums {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translate(calc(-50% - 70px), -50%) scale(1) rotate(0deg) !important;
+  filter: blur(0) !important;
+}
+
+#ag-home-cluster:hover .ag-cluster-playlists,
+#ag-home-cluster:focus-within .ag-cluster-playlists,
+#ag-home-cluster.ag-cluster-open .ag-cluster-playlists {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translate(calc(-50% + 70px), -50%) scale(1) rotate(0deg) !important;
+  filter: blur(0) !important;
+}
+
+#ag-home-cluster:hover .ag-cluster-artists,
+#ag-home-cluster:focus-within .ag-cluster-artists,
+#ag-home-cluster.ag-cluster-open .ag-cluster-artists {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translate(calc(-50% + 140px), -50%) scale(1) rotate(0deg) !important;
+  filter: blur(0) !important;
+}
+
+#ag-jam-floating-pill {
+  bottom: auto !important;
+}
+
+.Root__right-sidebar,
+[data-testid="right-sidebar"],
+aside[data-testid="right-sidebar"] {
+  border-radius: 22px !important;
+  overflow: hidden !important;
+}
+
+body .main-contextMenu-menu.ag-scrollable-submenu,
+body div[role="menu"].ag-scrollable-submenu,
+body [data-radix-menu-content].ag-scrollable-submenu {
+  height: auto !important;
+  max-height: 45vh !important;
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+  position: relative !important;
+}
+
+body .ag-scrollable-submenu-root {
+  overflow: visible !important;
+}
+
+body .ag-scrollable-submenu-root > * {
+  min-height: 0 !important;
+}
+
+body .ag-submenu-list-scroll {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+}
+
+body .ag-submenu-list-scroll > * {
+  flex-shrink: 0 !important;
 }
