@@ -2831,7 +2831,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     now_mode: 'colored', now_gradient_enabled: 'false', now_color: '#2a2034', now_color_2: '#5b3d7a', now_gradient_angle: '135', now_gradient_position: '50', now_gradient_blend: '36', now_brightness: '72', now_frost: '52',
     now_width: '860', now_height: '80', now_radius: '40',
     sidebar_song_bg: 'true', sidebar_bg_strength: '60',
-    glow_opacity: '0.8', blobs_opacity: '0.25',
+    glow_opacity: '0.8', glow_size: '155', blobs_opacity: '0.25',
     glass_reflection: 'true', glass_blur: '24'
   };
 
@@ -2911,9 +2911,10 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
             <div class="ag-settings-body">
               <div class="ag-tab-content active" id="tab-general">
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Hero Glow Color</label>${tip('Main ambient glow color used across the home view and glass tint.')}</span><input type="color" id="ag-col-glow" value="${getSetting('glow')}"/></div>
-              <div class="ag-setting-item"><span class="ag-setting-label"><label>Hero Glow Intensity</label>${tip('Controls how visible the large background glow is.')}</span><input type="range" id="ag-range-glow_opacity" min="0" max="1" step="0.05" value="${getSetting('glow_opacity')}"/></div>
-              <div class="ag-setting-item"><span class="ag-setting-label"><label>Background Blobs Color</label>${tip('Color used by the soft background blobs.')}</span><input type="color" id="ag-col-blobs" value="${getSetting('blobs')}"/></div>
-              <div class="ag-setting-item"><span class="ag-setting-label"><label>Blobs Intensity</label>${tip('Controls the strength of the decorative background blobs.')}</span><input type="range" id="ag-range-blobs_opacity" min="0" max="1" step="0.05" value="${getSetting('blobs_opacity')}"/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Hero Glow Intensity</label>${tip('Controls how visible the large background glow is.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-glow_opacity" min="0" max="1" step="0.05" value="${getSetting('glow_opacity')}"/><span id="ag-glow-opacity-value">${Math.round(Number(getSetting('glow_opacity')) * 100)}%</span></div></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Hero Glow Size</label>${tip('Changes how wide and tall the main background glow spreads.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-glow_size" min="60" max="220" step="5" value="${getSetting('glow_size')}"/><span id="ag-glow-size-value">${getSetting('glow_size')}%</span></div></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Background Glow Color</label>${tip('Color used by the soft background glow.')}</span><input type="color" id="ag-col-blobs" value="${getSetting('blobs')}"/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Background Glow Intensity</label>${tip('Controls the strength of the soft background glow.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-blobs_opacity" min="0" max="1" step="0.05" value="${getSetting('blobs_opacity')}"/><span id="ag-blobs-opacity-value">${Math.round(Number(getSetting('blobs_opacity')) * 100)}%</span></div></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Song Sidebar BG</label>${tip('Uses the current cover as a blurred frosted background in the right sidebar.')}</span><input type="checkbox" id="ag-check-sidebar_song_bg" ${getSetting('sidebar_song_bg') === 'true' ? 'checked' : ''}/></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Sidebar BG Strength</label>${tip('Adjusts how strongly the cover colors show through the sidebar glass.')}</span><input type="range" id="ag-range-sidebar_bg_strength" min="0" max="100" step="5" value="${getSetting('sidebar_bg_strength')}"/></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>FrostedGlass/Glass</label>${tip('Adds a stronger reflective border and inset shine to glass surfaces.')}</span><input type="checkbox" id="ag-check-glass_reflection" ${getSetting('glass_reflection') === 'true' ? 'checked' : ''}/></div>
@@ -3027,6 +3028,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
             if (k === 'now_width') d.querySelector('#ag-now-width-value').textContent = val + 'px';
             if (k === 'now_height') d.querySelector('#ag-now-height-value').textContent = val + 'px';
             if (k === 'now_radius') d.querySelector('#ag-now-radius-value').textContent = val + 'px';
+            if (k === 'glow_opacity') d.querySelector('#ag-glow-opacity-value').textContent = Math.round(Number(val) * 100) + '%';
+            if (k === 'glow_size') d.querySelector('#ag-glow-size-value').textContent = val + '%';
+            if (k === 'blobs_opacity') d.querySelector('#ag-blobs-opacity-value').textContent = Math.round(Number(val) * 100) + '%';
             const builder = d.querySelector('.ag-gradient-builder');
             if (builder) {
               builder.dataset.gradientEnabled = (d.querySelector('#ag-check-now_gradient_enabled')?.checked || false).toString();
@@ -3111,6 +3115,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const btn_icon = getSetting('btn_icon');
     const blobs = getSetting('blobs');
     const glowOpacity = getSetting('glow_opacity');
+    const glowSize = getNumericSetting('glow_size', 155, 60, 220);
     const blobsOpacity = getSetting('blobs_opacity');
 
     // Root Variables for Cluster & Glow
@@ -3181,6 +3186,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     
     root.style.setProperty('--ag-ambient-color', glow);
     root.style.setProperty('--ag-glow-opacity', glowOpacity);
+    root.style.setProperty('--ag-glow-size', glowSize + 'vw');
+    root.style.setProperty('--ag-glow-height', Math.round(glowSize * 0.84) + 'vh');
     root.style.setProperty('--ag-blobs-opacity', blobsOpacity);
     root.style.setProperty('--ag-col-blobs', blobs);
     root.style.setProperty('--ag-surface-tint', `color-mix(in srgb, ${glow} 22%, transparent)`);

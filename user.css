@@ -3487,7 +3487,10 @@ body:has([data-radix-menu-content]) .ag-dock-hitbox {
 #ag-now-position-value,
 #ag-now-blend-value,
 #ag-now-brightness-value,
-#ag-now-frost-value {
+#ag-now-frost-value,
+#ag-glow-opacity-value,
+#ag-glow-size-value,
+#ag-blobs-opacity-value {
   color: rgba(255,255,255,0.72) !important;
   font-size: 12px !important;
   font-weight: 700 !important;
@@ -4140,16 +4143,24 @@ button:has(.main-userWidget-box):hover ~ #ag-side-dock .ag-dock-hitbox:not(#ag-p
   max-height: 44px !important;
 }
 
-#ag-blobs,
+#ag-blobs {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
 #ag-blobs .ag-blob,
 .ag-blob {
-  display: none !important;
-  visibility: hidden !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: var(--ag-blobs-opacity, 0.25) !important;
 }
 
 #ag-hero-glow {
+  width: var(--ag-glow-size, 155vw) !important;
+  height: var(--ag-glow-height, 130vh) !important;
   filter: blur(54px) saturate(105%) !important;
-  opacity: 0.34 !important;
+  opacity: var(--ag-glow-opacity, 0.8) !important;
 }
 
 .ag-native-profile-anchor {
@@ -4431,6 +4442,57 @@ body.ag-now-preview #ag-settings-panel .ag-settings-wrapper {
     grid-template-columns: 1fr !important;
   }
   .ag-settings-footer {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+#tab-general.ag-tab-content.active {
+  grid-template-columns: repeat(2, minmax(280px, 1fr)) !important;
+  gap: 10px 12px !important;
+}
+
+#tab-general .ag-setting-item {
+  min-height: 44px !important;
+  padding: 9px 12px !important;
+  border-radius: 8px !important;
+  background: rgba(255,255,255,0.035) !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+}
+
+#tab-general .ag-setting-item:hover {
+  background: rgba(255,255,255,0.055) !important;
+  border-color: rgba(255,255,255,0.09) !important;
+}
+
+#tab-general .ag-setting-label {
+  flex: 1 1 auto !important;
+  max-width: 190px !important;
+}
+
+#tab-general .ag-setting-item label {
+  color: rgba(245,242,255,0.82) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
+#tab-general .ag-angle-control {
+  min-width: 190px !important;
+  grid-template-columns: minmax(104px, 1fr) 42px !important;
+}
+
+#tab-general input[type="color"] {
+  width: 42px !important;
+  height: 24px !important;
+  margin-left: 0 !important;
+}
+
+#tab-general input[type="checkbox"] {
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 980px) {
+  #tab-general.ag-tab-content.active {
     grid-template-columns: 1fr !important;
   }
 }
