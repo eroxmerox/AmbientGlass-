@@ -2829,7 +2829,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     home: '#1DB954', liked: '#ff4b4b', albums: '#4b9eff', playlists: '#b34bff', artists: '#ffcc4b',
     btn_bg: 'rgba(20, 18, 38, 0.65)', btn_icon: '#f0f0ff', blobs: '#7b5fdb',
     now_mode: 'colored', now_gradient_enabled: 'false', now_color: '#2a2034', now_color_2: '#5b3d7a', now_gradient_angle: '135', now_gradient_position: '50', now_gradient_blend: '36', now_brightness: '72', now_frost: '52',
-    now_width: '860', now_height: '80', now_radius: '40',
+    now_width: '860', now_height: '80', now_radius: '40', cover_spin: 'false',
     sidebar_song_bg: 'true', sidebar_bg_strength: '60',
     glow_opacity: '0.8', glow_size: '155', blobs_opacity: '0.25',
     glass_reflection: 'true', glass_blur: '24'
@@ -2940,21 +2940,31 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
             </div>
 
             <div class="ag-tab-content" id="tab-ui">
-               <div class="ag-setting-item"><label>Accent Color (Like/UI)</label><input type="color" id="ag-col-accent" value="${getSetting('accent')}"/></div>
               <div class="ag-gradient-builder" data-gradient-enabled="${isNowGradientEnabled()}" data-now-mode="${getSetting('now_mode')}">
-                 <div class="ag-setting-item"><label>Now Playing Color</label><input type="color" id="ag-col-now_color" value="${getSetting('now_color')}"/></div>
-                 <div class="ag-setting-item"><label>Bar Style</label><select id="ag-select-now_mode"><option value="transparent" ${getSetting('now_mode') === 'transparent' ? 'selected' : ''}>Normal glass</option><option value="frosted" ${getSetting('now_mode') === 'frosted' ? 'selected' : ''}>Frosted glass</option><option value="colored" ${getSetting('now_mode') !== 'transparent' && getSetting('now_mode') !== 'frosted' ? 'selected' : ''}>Colored glass</option></select></div>
-                 <div class="ag-setting-item"><label>Gradient</label><input type="checkbox" id="ag-check-now_gradient_enabled" ${isNowGradientEnabled() ? 'checked' : ''}/></div>
-                 <div class="ag-setting-item ag-frosted-only"><label>Frosted Strength</label><div class="ag-angle-control"><input type="range" id="ag-range-now_frost" min="0" max="100" step="2" value="${getSetting('now_frost')}"/><span id="ag-now-frost-value">${getSetting('now_frost')}%</span></div></div>
-                 <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Width</label>${tip('Changes the floating song player width in pixels.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_width" min="520" max="1120" step="20" value="${getSetting('now_width')}"/><span id="ag-now-width-value">${getSetting('now_width')}px</span></div></div>
-                 <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Height</label>${tip('Changes the floating song player height in pixels.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_height" min="62" max="110" step="2" value="${getSetting('now_height')}"/><span id="ag-now-height-value">${getSetting('now_height')}px</span></div></div>
-                 <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Radius</label>${tip('Rounds the song player. Higher values make it pill shaped.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_radius" min="8" max="56" step="2" value="${getSetting('now_radius')}"/><span id="ag-now-radius-value">${getSetting('now_radius')}px</span></div></div>
-                 <div class="ag-setting-item ag-gradient-only"><label>Second Color</label><input type="color" id="ag-col-now_color_2" value="${getSetting('now_color_2')}"/></div>
-                 <div class="ag-setting-item ag-gradient-only"><label>Gradient Angle</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_angle" min="0" max="360" step="5" value="${getSetting('now_gradient_angle')}"/><span id="ag-now-angle-value">${getSetting('now_gradient_angle')} deg</span></div></div>
-                 <div class="ag-setting-item ag-gradient-only"><label>Gradient Position</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_position" min="0" max="100" step="1" value="${getSetting('now_gradient_position')}"/><span id="ag-now-position-value">${getSetting('now_gradient_position')}%</span></div></div>
-                 <div class="ag-setting-item ag-gradient-only"><label>Blend Width</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_blend" min="0" max="100" step="2" value="${getSetting('now_gradient_blend')}"/><span id="ag-now-blend-value">${getSetting('now_gradient_blend')}%</span></div></div>
-                 <div class="ag-setting-item"><label>Glass Brightness</label><div class="ag-angle-control"><input type="range" id="ag-range-now_brightness" min="20" max="100" step="2" value="${getSetting('now_brightness')}"/><span id="ag-now-brightness-value">${getSetting('now_brightness')}%</span></div></div>
-                <div class="ag-gradient-preview" style="--ag-preview-angle:${getSetting('now_gradient_angle')}deg;--ag-preview-position:${getSetting('now_gradient_position')}%;--ag-preview-blend:${getNumericSetting('now_gradient_blend', 36, 0, 100)}%;--ag-preview-a:${getSetting('now_color')};--ag-preview-b:${getSetting('now_color_2')};--ag-preview-brightness:${getSetting('now_brightness')}%;"></div>
+                <div class="ag-settings-section">
+                  <div class="ag-settings-section-title">Basics</div>
+                  <div class="ag-setting-item"><label>Accent Color (Like/UI)</label><input type="color" id="ag-col-accent" value="${getSetting('accent')}"/></div>
+                  <div class="ag-setting-item"><label>Now Playing Color</label><input type="color" id="ag-col-now_color" value="${getSetting('now_color')}"/></div>
+                  <div class="ag-setting-item"><label>Bar Style</label><select id="ag-select-now_mode"><option value="transparent" ${getSetting('now_mode') === 'transparent' ? 'selected' : ''}>Normal glass</option><option value="frosted" ${getSetting('now_mode') === 'frosted' ? 'selected' : ''}>Frosted glass</option><option value="colored" ${getSetting('now_mode') !== 'transparent' && getSetting('now_mode') !== 'frosted' ? 'selected' : ''}>Colored glass</option></select></div>
+                  <div class="ag-setting-item"><label>Gradient</label><input type="checkbox" id="ag-check-now_gradient_enabled" ${isNowGradientEnabled() ? 'checked' : ''}/></div>
+                  <div class="ag-setting-item"><span class="ag-setting-label"><label>Spinning Cover</label>${tip('Turns the player and sidebar cover art into a slow rotating circle.')}</span><input type="checkbox" id="ag-check-cover_spin" ${getSetting('cover_spin') === 'true' ? 'checked' : ''}/></div>
+                </div>
+                <div class="ag-settings-section">
+                  <div class="ag-settings-section-title">Player</div>
+                  <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Width</label>${tip('Changes the floating song player width in pixels.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_width" min="520" max="1120" step="20" value="${getSetting('now_width')}"/><span id="ag-now-width-value">${getSetting('now_width')}px</span></div></div>
+                  <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Height</label>${tip('Changes the floating song player height in pixels.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_height" min="62" max="110" step="2" value="${getSetting('now_height')}"/><span id="ag-now-height-value">${getSetting('now_height')}px</span></div></div>
+                  <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Radius</label>${tip('Rounds the song player. Higher values make it pill shaped.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_radius" min="8" max="56" step="2" value="${getSetting('now_radius')}"/><span id="ag-now-radius-value">${getSetting('now_radius')}px</span></div></div>
+                  <div class="ag-setting-item ag-frosted-only"><label>Frosted Strength</label><div class="ag-angle-control"><input type="range" id="ag-range-now_frost" min="0" max="100" step="2" value="${getSetting('now_frost')}"/><span id="ag-now-frost-value">${getSetting('now_frost')}%</span></div></div>
+                </div>
+                <div class="ag-settings-section ag-settings-section-wide">
+                  <div class="ag-settings-section-title">Gradient</div>
+                  <div class="ag-setting-item ag-gradient-only"><label>Second Color</label><input type="color" id="ag-col-now_color_2" value="${getSetting('now_color_2')}"/></div>
+                  <div class="ag-setting-item ag-gradient-only"><label>Gradient Angle</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_angle" min="0" max="360" step="5" value="${getSetting('now_gradient_angle')}"/><span id="ag-now-angle-value">${getSetting('now_gradient_angle')} deg</span></div></div>
+                  <div class="ag-setting-item ag-gradient-only"><label>Gradient Position</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_position" min="0" max="100" step="1" value="${getSetting('now_gradient_position')}"/><span id="ag-now-position-value">${getSetting('now_gradient_position')}%</span></div></div>
+                  <div class="ag-setting-item ag-gradient-only"><label>Blend Width</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_blend" min="0" max="100" step="2" value="${getSetting('now_gradient_blend')}"/><span id="ag-now-blend-value">${getSetting('now_gradient_blend')}%</span></div></div>
+                  <div class="ag-setting-item"><label>Glass Brightness</label><div class="ag-angle-control"><input type="range" id="ag-range-now_brightness" min="20" max="100" step="2" value="${getSetting('now_brightness')}"/><span id="ag-now-brightness-value">${getSetting('now_brightness')}%</span></div></div>
+                  <div class="ag-gradient-preview" style="--ag-preview-angle:${getSetting('now_gradient_angle')}deg;--ag-preview-position:${getSetting('now_gradient_position')}%;--ag-preview-blend:${getNumericSetting('now_gradient_blend', 36, 0, 100)}%;--ag-preview-a:${getSetting('now_color')};--ag-preview-b:${getSetting('now_color_2')};--ag-preview-brightness:${getSetting('now_brightness')}%;"></div>
+                </div>
                </div>
                <p style="font-size: 11px; opacity: 0.6; margin-top: 10px;">These options use AmbientGlass variables only and do not change Spotify spice text colors.</p>
             </div>
@@ -3109,6 +3119,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const nowWidth = Math.max(520, Math.min(1120, Number(getSetting('now_width')) || 860));
     const nowHeight = Math.max(62, Math.min(110, Number(getSetting('now_height')) || 80));
     const nowRadius = Math.max(8, Math.min(56, Number(getSetting('now_radius')) || 40));
+    const coverSpin = getSetting('cover_spin') === 'true';
     const sidebarSongBg = getSetting('sidebar_song_bg') === 'true';
     const sidebarBgStrength = Math.max(0, Math.min(100, Number(getSetting('sidebar_bg_strength')) || 60));
     const btn_bg = getSetting('btn_bg');
@@ -3137,6 +3148,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     root.style.setProperty('--ag-now-width', nowWidth + 'px');
     root.style.setProperty('--ag-now-height', nowHeight + 'px');
     root.style.setProperty('--ag-now-radius', nowRadius + 'px');
+    document.body?.classList.toggle('ag-cover-spin', coverSpin);
     root.style.setProperty('--ag-sidebar-cover-opacity', (sidebarBgStrength / 100).toFixed(2));
     root.style.setProperty('--ag-sidebar-cover-blur', (28 + sidebarBgStrength * 0.42).toFixed(0) + 'px');
     document.body?.classList.toggle('ag-sidebar-song-bg-disabled', !sidebarSongBg);
