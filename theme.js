@@ -1,14 +1,14 @@
 console.log('>> [AmbientGlass] Script Triggered! <<');
-// AmbientGlass — theme.js (v15.0) ✦ ULTIMATE BUILD
-// • Branding: "AmbientGlass" added to Startup
-// • Entrance: Soft Drop & Zoom
-// • Layout: 50/50 Split
-// • Safety: 60px Margin
-// • NavFix: Colon to Slash conversion added by Antigravity
+// AmbientGlass - theme.js (v15.0)
+// Branding: AmbientGlass startup screen.
+// Entrance: soft drop and zoom.
+// Layout: 50/50 split.
+// Safety: 60px margin.
+// NavFix: colon-to-slash conversion added by Antigravity.
 
 (function AmbientGlass() {
   'use strict';
-  console.log("AmbientGlass v15.0: ULTIMATE BUILD. Created by EROX");
+  console.log("AmbientGlass V16. Created by EROX");
 
   if (!Spicetify?.Player || !Spicetify?.Platform) {
     setTimeout(AmbientGlass, 300);
@@ -49,10 +49,21 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   let _lastAppliedLayoutSignature = '';
   let _lastVisibilitySignature = '';
   const HITBOX_STYLE_TEXT = `
-      #ag-side-dock { display: contents !important; }
-      .ag-dock-hitbox {
+      #ag-side-dock {
         position: fixed !important;
-        z-index: 70;
+        left: var(--ag-dock-x, 14px) !important;
+        top: var(--ag-dock-y, 40px) !important;
+        z-index: 1000002 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 44px !important;
+        pointer-events: auto !important;
+      }
+      .ag-dock-hitbox {
+        position: relative !important;
+        z-index: 1;
         width: 44px !important;
         height: 44px !important;
         min-width: 44px !important;
@@ -191,16 +202,18 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       setStyleIfChanged(jamPill, 'transform', 'translate(-50%, -50%)', 'important');
     }
 
+    positionUpNextCard();
+
     document.body?.classList.remove('ag-sidebar-on-left', 'ag-sidebar-on-right');
   }
 
   function getMainScrollY() {
     const scrollers = Array.from(document.querySelectorAll('.Root__main-view [data-overlayscrollbars-viewport], .Root__main-view .os-viewport, .Root__main-view'));
-    const liveY = scrollers.reduce((max, el) => Math.max(max, el?.scrollTop || 0), 0);
-    return liveY || _lastScrollY || 0;
+    if (!scrollers.length) return _lastScrollY || 0;
+    return scrollers.reduce((max, el) => Math.max(max, Number(el?.scrollTop) || 0), 0);
   }
 
-  // ── NAVIGATOR FIX ──
+  // Navigator fix.
   function safeNavigate(input) {
     if (!input) return;
     let path = input;
@@ -215,7 +228,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const el = document.querySelector(".main-topBar-container");
     if (!el) return;
     
-    // RADIKALE AUSNAHME: Wenn wir im Marketplace sind, zeigen wir ALLES
+    // Marketplace is a special case: keep the native top bar visible.
     const path = Spicetify.Platform.History.location.pathname;
     const isMarketplace = path.includes("marketplace") || !!document.querySelector('.marketplace-header') || !!document.querySelector('#marketplace-extension-button');
 
@@ -238,7 +251,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     targets.forEach(sel => {
       document.querySelectorAll(sel).forEach(el => { 
         const style = el.getAttribute('style') || '';
-        // Nur löschen, wenn KEIN Bild (url) im Style ist
+        // Only clear backgrounds that are not real image URLs.
         if (!style.includes('url(')) {
           el.style.setProperty('background', 'transparent', 'important');
           el.style.setProperty('background-color', 'transparent', 'important');
@@ -299,19 +312,562 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     });
     document.body.prepend(w);
   }
+  function createGlowSmoother() {
+    if (document.getElementById('ag-glow-smoother')) return;
+    const smoother = document.createElement('div');
+    smoother.id = 'ag-glow-smoother';
+    document.body.prepend(smoother);
+  }
 
   function createSearchOverlay() {
     if (document.getElementById('ag-centered-search')) return;
     const d = document.createElement('div'); d.id = 'ag-centered-search';
-    d.innerHTML = `<div class="ag-ring"></div><div class="ag-pill-search">${svg(ICONS.search, { size: 18 })}<input id="ag-input" placeholder="Search..."/></div>`;
+    d.innerHTML = `<div class="ag-ring"></div><div class="ag-pill-search">${svg(ICONS.search, { size: 18 })}<input class="ag-input" placeholder="Artists..."/></div><div id="ag-search-suggestions"></div>`;
     const inp = d.querySelector('input');
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') safeNavigate('/search/' + encodeURIComponent(inp.value)); });
+    inp.setAttribute('autocomplete', 'new-password');
+    inp.setAttribute('autocorrect', 'off');
+    inp.setAttribute('autocapitalize', 'off');
+    inp.setAttribute('spellcheck', 'false');
+    inp.setAttribute('aria-autocomplete', 'none');
+    inp.setAttribute('data-form-type', 'other');
+    inp.id = 'ag-input-' + Date.now();
+    inp.name = 'ag-search-' + Date.now();
+    setupSearchPlaceholderRotation(inp);
+    setupSearchSuggestions(inp, d.querySelector('#ag-search-suggestions'));
     document.body.appendChild(d);
     applyLayout();
-    setTimeout(() => setupAnimatedPlaceholder(inp), 2000);
   }
 
-  // ── LIBRARY ──
+  function focusAmbientSearch() {
+    createSearchOverlay();
+    const search = document.getElementById('ag-centered-search');
+    const input = search?.querySelector('input');
+    if (!search || !input) return false;
+    search.classList.add('ag-search-hotkey-focus');
+    input.focus();
+    input.select?.();
+    setTimeout(() => search.classList.remove('ag-search-hotkey-focus'), 900);
+    return true;
+  }
+
+  function setupAmbientSearchHotkey() {
+    if (window.__agSearchHotkeyInstalled) return;
+    window.__agSearchHotkeyInstalled = true;
+    window.addEventListener('keydown', event => {
+      if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || event.key?.toLowerCase?.() !== 'k') return;
+      if (!focusAmbientSearch()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    }, true);
+  }
+
+  function createUpNextCard() {
+    if (document.getElementById('ag-up-next-card')) return;
+    const card = document.createElement('button');
+    card.id = 'ag-up-next-card';
+    card.type = 'button';
+    card.innerHTML = `
+      <span class="ag-up-next-art"></span>
+      <span class="ag-up-next-copy">
+        <span class="ag-up-next-label">Up next</span>
+        <span class="ag-up-next-title"></span>
+        <span class="ag-up-next-subtitle"></span>
+      </span>
+    `;
+    card.addEventListener('click', () => {
+      const uri = card.dataset.uri;
+      if (uri) safeNavigate(uri);
+    });
+    document.body.appendChild(card);
+    positionUpNextCard();
+  }
+
+  function positionUpNextCard() {
+    const card = document.getElementById('ag-up-next-card');
+    const nowPlaying = document.querySelector('.main-nowPlayingBar-container') ||
+                       document.querySelector('.Root__now-playing-bar > *') ||
+                       document.querySelector('.Root__now-playing-bar') ||
+                       document.getElementById('ag-centered-search');
+    if (!card || !nowPlaying) return;
+    const rect = nowPlaying.getBoundingClientRect();
+    if (!rect.width) return;
+    const showBelow = rect.top < 130;
+    const top = showBelow ? rect.bottom + 12 : rect.top - 12;
+    card.style.left = `${rect.left + rect.width / 2}px`;
+    card.style.top = `${top}px`;
+    card.style.width = `${Math.min(Math.max(rect.width * 0.68, 300), 460)}px`;
+    card.classList.toggle('ag-up-next-below', showBelow);
+  }
+
+  function getPlayerPositionMs() {
+    try {
+      if (typeof Spicetify.Player.getProgress === 'function') return Number(Spicetify.Player.getProgress()) || 0;
+    } catch {}
+    const data = Spicetify.Player?.data || {};
+    const position = Number(data.position || data.progress || data.progressMs || 0);
+    const since = Number(data.positionAsOfTimestamp || data.timestamp || 0);
+    if (position && since) return position + Math.max(0, Date.now() - since);
+    return position || 0;
+  }
+
+  function getPlayerDurationMs() {
+    const item = Spicetify.Player?.data?.item || {};
+    const metadata = item.metadata || {};
+    return Number(item.duration?.milliseconds || item.duration_ms || metadata.duration || metadata.duration_ms || 0);
+  }
+
+  function normalizeSpotifyImageUrl(url) {
+    const clean = String(url || '').trim();
+    if (!clean) return '';
+    if (clean.startsWith('spotify:image:')) return `https://i.scdn.co/image/${clean.split(':').pop()}`;
+    return clean;
+  }
+
+  function firstImageUrl(...sources) {
+    for (const source of sources) {
+      if (!source) continue;
+      if (typeof source === 'string') {
+        const url = normalizeSpotifyImageUrl(source);
+        if (url) return url;
+      }
+      if (Array.isArray(source)) {
+        const url = firstImageUrl(...source);
+        if (url) return url;
+      }
+      if (source?.url) return normalizeSpotifyImageUrl(source.url);
+      if (source?.uri) return normalizeSpotifyImageUrl(source.uri);
+      if (source?.sources) {
+        const url = firstImageUrl(source.sources);
+        if (url) return url;
+      }
+      if (source?.items) {
+        const url = firstImageUrl(source.items);
+        if (url) return url;
+      }
+    }
+    return '';
+  }
+
+  function deepFindImageUrl(source, depth = 0, seen = new Set()) {
+    if (!source || depth > 5 || seen.has(source)) return '';
+    if (typeof source === 'string') {
+      if (source.startsWith('spotify:image:') || source.includes('i.scdn.co/image/') || /^https?:\/\/.+\.(jpg|jpeg|png|webp)(\?|$)/i.test(source)) {
+        return normalizeSpotifyImageUrl(source);
+      }
+      return '';
+    }
+    if (typeof source !== 'object') return '';
+    seen.add(source);
+    if (Array.isArray(source)) {
+      for (const item of source) {
+        const url = deepFindImageUrl(item, depth + 1, seen);
+        if (url) return url;
+      }
+      return '';
+    }
+    if (source.url || source.uri) {
+      const url = firstImageUrl(source.url, source.uri);
+      if (url) return url;
+    }
+    if (source.file_id) return normalizeSpotifyImageUrl(`spotify:image:${source.file_id}`);
+    const preferredKeys = ['image', 'images', 'coverArt', 'cover', 'cover_group', 'album', 'albumOfTrack', 'metadata', 'sources', 'items'];
+    for (const key of preferredKeys) {
+      const url = deepFindImageUrl(source[key], depth + 1, seen);
+      if (url) return url;
+    }
+    for (const [key, value] of Object.entries(source)) {
+      if (!/image|cover|album|art|metadata|source|item/i.test(key)) continue;
+      const url = deepFindImageUrl(value, depth + 1, seen);
+      if (url) return url;
+    }
+    return '';
+  }
+
+  function normalizeNextTrack(raw) {
+    const item = raw?.track || raw?.item || raw?.contextTrack || raw?.data || raw;
+    if (!item) return null;
+    const metadata = item.metadata || {};
+    const name = item.name || metadata.title || metadata.name || item.title;
+    const artistItems = item.artists?.items || item.artists || item.albumOfTrack?.artists?.items || [];
+    const artists = artistItems?.map?.(artist => artist?.name || artist?.profile?.name).filter(Boolean).join(', ') ||
+                    metadata.artist_name ||
+                    metadata.artistName ||
+                    metadata.artists ||
+                    item.subtitle ||
+                    '';
+    const image = firstImageUrl(
+      item.album?.images,
+      item.images,
+      item.images?.items,
+      item.coverArt,
+      item.albumOfTrack?.coverArt,
+      item.image_url,
+      item.imageUrl,
+      metadata.image_url,
+      metadata.imageUrl,
+      metadata.image_small_url,
+      metadata.image_large_url,
+      metadata.image_xlarge_url,
+      metadata.album_image_url
+    ) || deepFindImageUrl(raw) || deepFindImageUrl(item);
+    const uri = item.uri || raw?.uri || metadata.uri || '';
+    return name ? { name, artists, image, uri } : null;
+  }
+
+  function getCurrentTrackImage() {
+    const data = Spicetify.Player?.data || Spicetify.Platform?.PlayerAPI?._state || {};
+    const item = data.item || data.track || data.contextTrack || data.current || data;
+    return normalizeNextTrack(item)?.image || deepFindImageUrl(data) || '';
+  }
+
+  let _lastSidebarCover = '';
+  function updateSidebarCoverBackground() {
+    const image = getCurrentTrackImage();
+    if (image === _lastSidebarCover) return;
+    _lastSidebarCover = image;
+    document.body?.classList.toggle('ag-sidebar-cover-active', !!image);
+    if (image) {
+      document.documentElement.style.setProperty('--ag-sidebar-cover', `url("${image.replace(/"/g, '\\"')}")`);
+    } else {
+      document.documentElement.style.removeProperty('--ag-sidebar-cover');
+    }
+  }
+
+  function applySidebarWidth() {
+    const sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], aside[data-testid="right-sidebar"]');
+    if (!sidebar) return;
+    if (!window.__agSidebarResizeResetDone) {
+      window.__agSidebarResizeResetDone = true;
+      localStorage.removeItem('ag-sidebar-width');
+      ['width', 'min-width', 'max-width', 'flex-basis'].forEach(prop => sidebar.style.removeProperty(prop));
+      const parent = sidebar.parentElement;
+      parent?.style.removeProperty('--ag-sidebar-width');
+      parent?.style.removeProperty('--right-sidebar-width');
+      parent?.style.removeProperty('grid-template-columns');
+    }
+    document.body?.classList.remove('ag-sidebar-custom-width', 'ag-sidebar-native-collapsed');
+    document.documentElement.style.removeProperty('--ag-sidebar-width');
+    document.documentElement.style.removeProperty('--ag-sidebar-extra');
+    document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
+    document.getElementById('ag-sidebar-resize-hitbox')?.remove();
+    sidebar.querySelectorAll(`
+      .main-nowPlayingView-nowPlayingView,
+      [data-testid="now-playing-view"],
+      [data-testid="now-playing-view-background"],
+      .main-nowPlayingView-scrollNode,
+      .main-nowPlayingView-content,
+      .main-nowPlayingView-section,
+      [class*="nowPlayingView_nowPlayingView"],
+      [class*="nowPlayingView_content"],
+      [class*="nowPlayingView_scrollNode"],
+      [class*="nowPlayingView_section"],
+      [data-overlayscrollbars-viewport],
+      .os-viewport,
+      .os-content
+    `).forEach(el => {
+      el.style.setProperty('width', '100%', 'important');
+      el.style.setProperty('min-width', '0', 'important');
+      el.style.setProperty('max-width', 'none', 'important');
+      el.style.setProperty('transform', 'none', 'important');
+    });
+  }
+
+  function syncSidebarOuterCollapse() {
+    document.body?.classList.remove('ag-sidebar-native-collapsed');
+    document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
+  }
+
+  function updateSidebarResizeHitbox() {
+    const sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], aside[data-testid="right-sidebar"]');
+    document.getElementById('ag-sidebar-resize-hitbox')?.remove();
+    if (!sidebar) return;
+    applySidebarWidth();
+    normalizeNativeSidebarResizeGrip(sidebar);
+  }
+
+  function normalizeNativeSidebarResizeGrip(sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], aside[data-testid="right-sidebar"]')) {
+    if (!sidebar) return;
+    const sideRect = sidebar.getBoundingClientRect();
+    if (!sideRect.width || !sideRect.height) return;
+    sidebar.querySelectorAll('.LayoutResizer__resize-bar, [class*="LayoutResizer"][class*="resize-bar"]').forEach(el => {
+      el.classList.add('ag-native-sidebar-resize-grip');
+      el.style.setProperty('position', 'absolute', 'important');
+      el.style.setProperty('left', '-10px', 'important');
+      el.style.setProperty('right', 'auto', 'important');
+      el.style.setProperty('top', '0', 'important');
+      el.style.setProperty('bottom', '0', 'important');
+      el.style.setProperty('width', '20px', 'important');
+      el.style.setProperty('min-width', '20px', 'important');
+      el.style.setProperty('max-width', '20px', 'important');
+      el.style.setProperty('background', 'transparent', 'important');
+      el.style.setProperty('border', '0', 'important');
+      el.style.setProperty('box-shadow', 'none', 'important');
+      el.style.setProperty('opacity', '0', 'important');
+      el.style.setProperty('cursor', 'ew-resize', 'important');
+      el.style.setProperty('pointer-events', 'auto', 'important');
+    });
+    Array.from(document.querySelectorAll('div, button, [role="separator"]')).forEach(el => {
+      if (el.id === 'ag-sidebar-resize-hitbox' || el.closest('.Root__main-view, #ag-settings-panel, .Root__now-playing-bar')) return;
+      const rect = el.getBoundingClientRect?.();
+      if (!rect || rect.height < 120 || rect.width > 16 || rect.width < 1) return;
+      const nearRightInside = Math.abs(rect.right - sideRect.right) < 8 || Math.abs(rect.left - sideRect.right) < 8;
+      const nearSidebarHeight = rect.top >= sideRect.top - 24 && rect.bottom <= sideRect.bottom + 24;
+      if (!nearRightInside || !nearSidebarHeight) return;
+      el.classList.add('ag-native-sidebar-resize-grip');
+      el.style.setProperty('position', 'fixed', 'important');
+      el.style.setProperty('left', `${Math.round(sideRect.left - 10)}px`, 'important');
+      el.style.setProperty('right', 'auto', 'important');
+      el.style.setProperty('top', `${Math.round(sideRect.top)}px`, 'important');
+      el.style.setProperty('width', '20px', 'important');
+      el.style.setProperty('height', `${Math.round(sideRect.height)}px`, 'important');
+      el.style.setProperty('background', 'transparent', 'important');
+      el.style.setProperty('border', '0', 'important');
+      el.style.setProperty('opacity', '0', 'important');
+      el.style.setProperty('cursor', 'ew-resize', 'important');
+      el.style.setProperty('z-index', '2147483645', 'important');
+      el.style.setProperty('pointer-events', 'auto', 'important');
+    });
+  }
+
+  window.addEventListener('pointerup', () => document.body?.classList.remove('ag-sidebar-resizing'), true);
+  window.addEventListener('blur', () => document.body?.classList.remove('ag-sidebar-resizing'), true);
+
+  async function hydrateNextTrackImage(track) {
+    if (!track || track.image || !track.uri?.startsWith?.('spotify:track:')) return track;
+    const id = track.uri.split(':').pop();
+    try {
+      const data = await Spicetify.CosmosAsync.get(`https://api.spotify.com/v1/tracks/${id}`);
+      return {
+        ...track,
+        image: firstImageUrl(data?.album?.images),
+        artists: track.artists || (data?.artists || []).map(artist => artist.name).join(', ')
+      };
+    } catch {
+      try {
+        const data = await Spicetify.CosmosAsync.get(`sp://metadata/4/track/${id}`);
+        return {
+          ...track,
+          image: firstImageUrl(
+            data?.album?.cover_group?.image?.map?.(image => image.file_id ? `spotify:image:${image.file_id}` : ''),
+            data?.album?.cover?.map?.(image => image.file_id ? `spotify:image:${image.file_id}` : '')
+          ),
+          artists: track.artists || (data?.artist || []).map(artist => artist.name).join(', ')
+        };
+      } catch {
+        return track;
+      }
+    }
+  }
+
+  async function getNextTrackInfo() {
+    const directSources = [
+      Spicetify.Queue?.nextTracks?.[0],
+      Spicetify.Queue?.queue?.nextTracks?.[0],
+      Spicetify.Queue?.queue?.next_tracks?.[0],
+      Spicetify.Player?.data?.nextItems?.[0],
+      Spicetify.Player?.data?.queue?.nextTracks?.[0],
+      Spicetify.Player?.data?.queue?.next_tracks?.[0],
+      Spicetify.Platform?.PlayerAPI?._state?.nextTracks?.[0],
+      Spicetify.Platform?.PlayerAPI?._state?.queue?.nextTracks?.[0]
+    ];
+    for (const source of directSources) {
+      const normalized = normalizeNextTrack(source);
+      if (normalized) return hydrateNextTrackImage(normalized);
+    }
+
+    try {
+      const data = await Spicetify.CosmosAsync.get('sp://player/v2/main');
+      const candidates = [
+        data?.queue?.next_tracks?.[0],
+        data?.queue?.nextTracks?.[0],
+        data?.next_tracks?.[0],
+        data?.nextTracks?.[0]
+      ];
+      for (const source of candidates) {
+        const normalized = normalizeNextTrack(source);
+        if (normalized) return hydrateNextTrackImage(normalized);
+      }
+    } catch {}
+    return null;
+  }
+
+  let _upNextLastUri = '';
+  let _upNextLastImage = '';
+  let _upNextLastFetch = 0;
+  let _upNextCached = null;
+  async function updateUpNextCard() {
+    const card = document.getElementById('ag-up-next-card');
+    if (!card) return;
+    positionUpNextCard();
+
+    const duration = getPlayerDurationMs();
+    const position = getPlayerPositionMs();
+    const remaining = duration - position;
+    const shouldShow = duration > 0 && remaining > 0 && remaining <= 20000 && !isModalOpen() && !isFullscreen();
+    if (!shouldShow) {
+      card.classList.remove('ag-up-next-visible');
+      return;
+    }
+
+    if (!_upNextCached || Date.now() - _upNextLastFetch > 5000) {
+      _upNextLastFetch = Date.now();
+      _upNextCached = await getNextTrackInfo();
+    }
+    const next = _upNextCached;
+    if (!next) {
+      card.classList.remove('ag-up-next-visible');
+      return;
+    }
+
+    const image = next.image || '';
+    if (_upNextLastUri !== next.uri || _upNextLastImage !== image) {
+      _upNextLastUri = next.uri;
+      _upNextLastImage = image;
+      card.querySelector('.ag-up-next-title').textContent = next.name;
+      card.querySelector('.ag-up-next-subtitle').textContent = next.artists || 'Next track';
+      card.dataset.uri = next.uri || '';
+      const art = card.querySelector('.ag-up-next-art');
+      art.style.backgroundImage = image ? `url("${image.replace(/"/g, '\\"')}")` : '';
+      art.classList.toggle('ag-up-next-art-empty', !image);
+    }
+    card.classList.add('ag-up-next-visible');
+  }
+
+  function setupSearchPlaceholderRotation(input) {
+    if (!input || input.dataset.agPlaceholderRotation === 'true') return;
+    input.dataset.agPlaceholderRotation = 'true';
+    let labels = getCachedPersonalSearchPlaceholders();
+    if (!labels.length) labels = ['Search...'];
+    let index = 0;
+    const apply = () => {
+      if (document.activeElement === input && input.value.trim()) return;
+      input.placeholder = labels[index % labels.length];
+      index += 1;
+    };
+    apply();
+    window.setInterval(apply, 1800);
+    const load = () => loadPersonalSearchPlaceholders().then(personalLabels => {
+      if (personalLabels.length) {
+        labels = personalLabels;
+        index = 0;
+        apply();
+      }
+    }).catch(() => {});
+    load();
+    const retry = window.setInterval(() => {
+      if (labels.length > 1 && labels[0] !== 'Search...') {
+        window.clearInterval(retry);
+        return;
+      }
+      load();
+    }, 5000);
+  }
+
+  function getCachedPersonalSearchPlaceholders() {
+    try {
+      const cached = JSON.parse(localStorage.getItem('ag-personal-search-placeholders') || '[]');
+      return Array.isArray(cached) ? cached.filter(Boolean).slice(0, 18) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function rememberPersonalSearchPlaceholders(labels) {
+    try {
+      localStorage.setItem('ag-personal-search-placeholders', JSON.stringify(labels.slice(0, 18)));
+    } catch {}
+  }
+
+  function shuffleArray(items) {
+    const arr = [...items];
+    for (let i = arr.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  async function loadPersonalSearchPlaceholders() {
+    const seen = new Set();
+    const groups = { artists: [], tracks: [], albums: [], playlists: [] };
+    const push = (group, name) => {
+      const clean = String(name || '').trim();
+      if (!clean) return;
+      const key = clean.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      groups[group]?.push(`${clean}...`);
+    };
+
+    try {
+      const [artists, tracks] = await Promise.all([
+        Spicetify.CosmosAsync.get('https://api.spotify.com/v1/me/top/artists?time_range=medium_term&limit=3'),
+        Spicetify.CosmosAsync.get('https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=6')
+      ]);
+
+      (artists?.items || []).slice(0, 3).forEach(item => push('artists', item.name));
+      (tracks?.items || []).slice(0, 3).forEach(item => push('tracks', item.name));
+      (tracks?.items || [])
+        .map(item => item?.album?.name)
+        .filter(Boolean)
+        .slice(0, 3)
+        .forEach(name => push('albums', name));
+    } catch {}
+
+    try {
+      const recent = await Spicetify.CosmosAsync.get('https://api.spotify.com/v1/me/player/recently-played?limit=12');
+      (recent?.items || []).slice(0, 6).forEach(entry => {
+        const track = entry?.track;
+        push('tracks', track?.name);
+        push('artists', track?.artists?.[0]?.name);
+        push('albums', track?.album?.name);
+      });
+    } catch {}
+
+    try {
+      const lib = await Spicetify.Platform.LibraryAPI.getContents({ limit: 300 });
+      const items = lib?.items || [];
+      items.filter(item => item?.uri?.includes(':artist:')).slice(0, 3).forEach(item => push('artists', item.name));
+      items.filter(item => item?.uri?.includes(':album:')).slice(0, 3).forEach(item => push('albums', item.name));
+      items.filter(item => item?.uri?.includes(':playlist:')).slice(0, 3).forEach(item => push('playlists', item.name));
+    } catch {}
+
+    collectVisibleSearchPlaceholders().forEach(item => push(item.group, item.name));
+
+    const mixed = [];
+    const shuffledGroups = shuffleArray(Object.values(groups).map(group => shuffleArray(group)));
+    for (let round = 0; round < 3; round += 1) {
+      shuffledGroups.forEach(group => {
+        if (group[round]) mixed.push(group[round]);
+      });
+    }
+    const labels = mixed.length ? shuffleArray(mixed).slice(0, 12) : getCachedPersonalSearchPlaceholders();
+    if (labels.length) rememberPersonalSearchPlaceholders(labels);
+    return labels;
+  }
+
+  function collectVisibleSearchPlaceholders() {
+    const items = [];
+    const add = (group, name) => {
+      const clean = String(name || '').trim();
+      if (!clean || clean.length < 2 || clean.length > 48) return;
+      if (/^(music|podcasts|show all|search|ambientglass|date added)$/i.test(clean)) return;
+      items.push({ group, name: clean });
+    };
+    document.querySelectorAll('.view-homeShortcutsGrid-shortcut, [data-testid="home-card"], [data-testid="card-click-handler"]').forEach(card => {
+      const text = (card.textContent || '').split('\n').map(x => x.trim()).filter(Boolean)[0];
+      add('playlists', text);
+    });
+    document.querySelectorAll('[data-testid="tracklist-row"], .main-trackList-trackListRow').forEach(row => {
+      const lines = (row.textContent || '').split('\n').map(x => x.trim()).filter(Boolean);
+      add('tracks', lines.find(line => !/^\d+$/.test(line)));
+      if (lines[1]) add('artists', lines[1].replace(/^E\s+/, ''));
+    });
+    return items.slice(0, 12);
+  }
+
+  // Library panel.
   let _allLibraryItems = []; let _currentType = ''; let _filterText = ''; let _sortOrder = 'recent';
   function createLibraryPanel() {
     if (document.getElementById('ag-lib-panel')) return;
@@ -345,14 +901,42 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     let items = [..._allLibraryItems];
     if (_filterText) items = items.filter(i => i.name?.toLowerCase().includes(_filterText));
     if (_sortOrder === 'az') items.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    grid.innerHTML = items.map(i => `<div class="ag-lib-item" onclick="AmbientGlass.safeNavigate('${i.uri}'); AmbientGlass.closeLibraryPanel();"><div class="ag-lib-item-cover" style="background-image:url('${i.images?.[0]?.url || i.image?.url || ''}')"></div><div class="ag-lib-item-name">${i.name || 'Untitled'}</div></div>`).join('') || `<div class="ag-lib-empty">No ${_currentType} found</div>`;
+    grid.replaceChildren();
+    if (!items.length) {
+      const empty = document.createElement('div');
+      empty.className = 'ag-lib-empty';
+      empty.textContent = `No ${_currentType} found`;
+      grid.appendChild(empty);
+      return;
+    }
+    items.forEach(item => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'ag-lib-item';
+      card.addEventListener('click', () => {
+        safeNavigate(item.uri);
+        closeLibraryPanel();
+      });
+
+      const cover = document.createElement('div');
+      cover.className = 'ag-lib-item-cover';
+      const imageUrl = item.images?.[0]?.url || item.image?.url || '';
+      if (imageUrl) cover.style.backgroundImage = `url("${imageUrl.replace(/"/g, '\\"')}")`;
+
+      const name = document.createElement('div');
+      name.className = 'ag-lib-item-name';
+      name.textContent = item.name || 'Untitled';
+
+      card.append(cover, name);
+      grid.appendChild(card);
+    });
   }
 
   let _lastScrollY = 0;
   function handleScroll(e) {
     const target = e.target;
     if (!target || !target.closest) return;
-    // Nur auf Main-View Scrolling reagieren — Sidebar, Menüs etc. ignorieren
+    // React only to main-view scrolling and ignore sidebars or menus.
     if (target.closest('.Root__right-sidebar') ||
         target.closest('.Root__nav-bar') ||
         target.closest('.main-contextMenu-menu') ||
@@ -360,13 +944,18 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         target.closest('#ag-settings-panel') ||
         target.closest('.main-buddyFeed-buddyFeed')) return;
     if (!target.closest('.Root__main-view')) return;
-    const y = Math.max(target.scrollTop || 0, getMainScrollY());
+    const y = Number.isFinite(target.scrollTop) ? Math.max(0, target.scrollTop) : getMainScrollY();
     _lastScrollY = y;
     queueVisibilityUpdate();
   }
 
   function triggerStartupAnimation() {
     if (document.getElementById('ag-startup-splash')) return;
+    if (sessionStorage.getItem('ag-skip-startup-once') === 'marketplace-tab') {
+      sessionStorage.removeItem('ag-skip-startup-once');
+      triggerEntrance();
+      return;
+    }
     const s = document.createElement('div'); s.id = 'ag-startup-splash';
     const l = `<svg viewBox="0 0 24 24" width="80" height="80" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.502 17.305c-.218.358-.684.474-1.042.256-2.848-1.74-6.433-2.133-10.655-1.17-.41.094-.813-.164-.906-.574-.094-.41.163-.813.573-.906 4.622-1.057 8.583-.605 11.774 1.345.358.218.474.685.256 1.043zm1.468-3.26c-.275.446-.86.59-1.306.314-3.258-2-8.226-2.583-12.08-1.413-.502.152-1.03-.134-1.182-.636-.152-.503.134-1.03.636-1.182 4.4-1.335 9.876-.683 13.618 1.618.447.275.59.86.314 1.306zm.128-3.41c-3.905-2.32-10.334-2.533-14.075-1.398-.6.182-1.24-.163-1.422-.763-.182-.6.163-1.24.763-1.422 4.29-1.302 11.393-1.04 15.894 1.63.54.32.715 1.014.395 1.554-.32.54-1.014.715-1.555.395z"/></svg>`;
     s.innerHTML = `
@@ -385,7 +974,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         <div class="ag-splash-title">AmbientGlass</div>
       </div>
       <div class="ag-splash-footer">made by EROX</div>
-      <div style="position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.15); font-size: 10px; letter-spacing: 1px; font-family: monospace;">BUILD 15.0.ULTIMATE</div>
+      <div style="position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.15); font-size: 10px; letter-spacing: 1px; font-family: monospace;">V16</div>
     `;
     document.body.appendChild(s);
     
@@ -413,7 +1002,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const artistUri = `spotify:artist:${artistId}`;
     const header = document.querySelector('.main-entityHeader-headerText');
     
-    // ANTI-DOPPEL: Nur heilen, wenn KEIN Bild da ist und wir nicht schon geheilt haben
+    // Avoid duplicate repair: heal only when no image exists yet.
     const existingImg = document.querySelector('.main-entityHeader-imageContainer:not(.ag-healed-image)');
     if (!header || existingImg || document.querySelector('.ag-healed-image')) return;
 
@@ -472,7 +1061,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     }
   }
 
-  function enforceProfileHitbox() {
+  function enforceProfileHitboxLegacyUnused() {
     const isBlocking = document.getElementById('ag-startup-splash') || document.getElementById('ag-settings-panel');
     ['ag-profile-hitbox', 'ag-market-hitbox', 'ag-stats-hitbox'].forEach(id => {
       const h = document.getElementById(id);
@@ -562,9 +1151,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         realBtn.dispatchEvent(evt);
       });
       document.body.appendChild(hitbox);
-      if (!hitboxNotified) {
-        setTimeout(() => Spicetify.showNotification("AmbientGlass: Hitbox OK ✓"), 1000);
-        hitboxNotified = true;
+      if (!window.__agHitboxNotified) {
+        setTimeout(() => Spicetify.showNotification("AmbientGlass: Hitbox OK"), 1000);
+        window.__agHitboxNotified = true;
       }
     } else if (hitbox.parentElement !== document.body) {
       document.body.appendChild(hitbox);
@@ -580,7 +1169,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       const dy = layout.dock.y - DEFAULT_LAYOUT.dock.y;
       hitbox.style.left = (rect.left + (rect.width / 2) - (size / 2) + dx) + 'px';
       hitbox.style.top = (rect.top + (rect.height / 2) - (size / 2) + dy) + 'px';
-      // Marketplace & Stats Hitboxes synchronisieren
+      // Keep Marketplace and Stats hitboxes in sync.
       enforceExtensionHitboxes(rect, size, layout);
     }
   }
@@ -612,7 +1201,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const createOrUpdate = (id, iconSvg, originalBtn, offsetIndex) => {
       if (!originalBtn) return;
       
-      // Original verstecken
+      // Hide the native button; the floating hitbox forwards clicks.
       originalBtn.style.setProperty('opacity', '0', 'important');
       originalBtn.style.setProperty('pointer-events', 'none', 'important');
       originalBtn.style.setProperty('visibility', 'hidden', 'important');
@@ -642,7 +1231,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function enforceProfileHitbox() {
-    const ids = ['ag-notify-hitbox', 'ag-friends-hitbox', 'ag-profile-hitbox', 'ag-market-hitbox', 'ag-stats-hitbox'];
+    const ids = ['ag-notify-hitbox', 'ag-friends-hitbox', 'ag-market-hitbox', 'ag-stats-hitbox'];
     const isBlocking = document.getElementById('ag-startup-splash') || document.getElementById('ag-settings-panel');
     ids.forEach(id => {
       const h = document.getElementById(id);
@@ -650,29 +1239,207 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     });
     if (isBlocking) return;
 
-    let style = document.getElementById('ag-hitbox-style');
-    if (!style) {
-      style = document.createElement('style');
-      style.id = 'ag-hitbox-style';
-      style.textContent = HITBOX_STYLE_TEXT;
-      document.head.appendChild(style);
+    positionNativeLeftDock();
+    document.querySelectorAll('.ag-dock-hitbox').forEach(button => button.remove());
+    const dock = document.getElementById('ag-side-dock');
+    if (dock) {
+      dock.classList.remove('ag-dock-open');
+      dock.style.setProperty('display', 'none', 'important');
+      dock.style.setProperty('pointer-events', 'none', 'important');
     }
+    if (!window.__agDockNotified && document.querySelector('.ag-native-dock-button')) {
+      setTimeout(() => Spicetify.showNotification("AmbientGlass: Dock OK"), 1000);
+      window.__agDockNotified = true;
+    }
+  }
 
-    if (!document.getElementById('ag-side-dock')) {
-      const dock = document.createElement('div');
+  function findNativeLeftRailButtons() {
+    const badText = /back|forward|zur.ck|vorw.rts|previous|next/i;
+    return Array.from(document.querySelectorAll('button, a'))
+      .map(el => ({
+        el,
+        rect: el.getBoundingClientRect(),
+        label: `${el.getAttribute('aria-label') || ''} ${el.title || ''} ${el.textContent || ''}`
+      }))
+      .filter(x => x.rect.width >= 24 &&
+                   x.rect.width <= 68 &&
+                   x.rect.height >= 24 &&
+                   x.rect.height <= 68 &&
+                   x.rect.left < 140 &&
+                   x.rect.top > 24 &&
+                   x.rect.top < 380 &&
+                   !badText.test(x.label) &&
+                   !x.el.classList.contains('ag-dock-hitbox') &&
+                   !String(x.el.id || '').startsWith('ag-') &&
+                   !x.el.closest('.Root__main-view, .Root__now-playing-bar, .main-connectBar-connectBar, .Root__right-sidebar, [data-testid="queue-page"], [class*="Queue"], [class*="queue"]'))
+      .sort((a, b) => a.rect.top - b.rect.top)
+      .map(x => x.el);
+  }
+
+  function positionNativeLeftDock() {
+    const layout = getLayout();
+    const startX = clamp(layout.dock?.x ?? DEFAULT_LAYOUT.dock.x, 8, 72);
+    const startY = clamp(layout.dock?.y ?? DEFAULT_LAYOUT.dock.y, 40, 96);
+    const profile = findNativeProfileButton();
+    const market = document.getElementById('marketplace-extension-button') ||
+                   document.querySelector('button[aria-label*="Marketplace"], button[title*="Marketplace"]');
+    const stats = document.getElementById('stats-extension-button') ||
+                  document.querySelector('.stats-button') ||
+                  document.querySelector('button[aria-label*="Stat"], button[title*="Stat"]');
+    const rail = findNativeLeftRailButtons();
+    const used = new Set([profile, market, stats].filter(Boolean));
+    const smallRail = rail.filter(button => !used.has(button) && !button.querySelector?.('img')).slice(0, 2);
+    smallRail.forEach(button => used.add(button));
+    const extensionRail = rail
+      .filter(button => !used.has(button) && !button.querySelector?.('img'))
+      .slice(0, 8)
+      .map((button, index) => ({ key: `ext-${index}`, button }));
+    const entries = [
+      { key: 'profile', button: profile },
+      { key: 'notify', button: smallRail[0] },
+      { key: 'friends', button: smallRail[1] },
+      { key: 'market', button: market ? ensureNativeDockProxy('market', market, svg(ICONS.cart, { size: 18 })) : null },
+      { key: 'stats', button: stats ? ensureNativeDockProxy('stats', stats, svg(ICONS.stats, { size: 18 })) : null },
+      ...extensionRail
+    ].filter(entry => entry.button?.isConnected);
+
+    document.querySelectorAll('.ag-native-dock-button').forEach(button => {
+      if (!entries.some(entry => entry.button === button)) cleanupNativeDockButton(button);
+    });
+
+    entries.forEach((entry, index) => styleNativeDockButton(entry.button, entry.key, startX, startY + index * 52));
+    document.body?.classList.add('ag-dock-ready');
+  }
+
+  function ensureNativeDockProxy(key, original, html) {
+    const id = `ag-native-${key}-proxy`;
+    let proxy = document.getElementById(id);
+    if (!proxy) {
+      proxy = document.createElement('button');
+      proxy.id = id;
+      proxy.type = 'button';
+      proxy.className = 'ag-native-dock-proxy';
+      proxy.innerHTML = html;
+      proxy.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const fresh = key === 'market'
+          ? (document.getElementById('marketplace-extension-button') || document.querySelector('button[aria-label*="Marketplace"], button[title*="Marketplace"]'))
+          : (document.getElementById('stats-extension-button') || document.querySelector('.stats-button') || document.querySelector('button[aria-label*="Stat"], button[title*="Stat"]'));
+        (fresh || original)?.click?.();
+      });
+      document.body.appendChild(proxy);
+    } else if (proxy.parentElement !== document.body) {
+      document.body.appendChild(proxy);
+    }
+    return proxy;
+  }
+
+  function styleNativeDockButton(button, key, left, top) {
+    const safeKey = String(key).replace(/[^a-z0-9_-]/gi, '-');
+    button.classList.add('ag-native-dock-button', `ag-native-dock-${safeKey}`);
+    button.dataset.agDockKey = key;
+    button.removeAttribute('disabled');
+    button.style.setProperty('position', 'fixed', 'important');
+    button.style.setProperty('left', `${left}px`, 'important');
+    button.style.setProperty('top', `${top}px`, 'important');
+    button.style.setProperty('right', 'auto', 'important');
+    button.style.setProperty('bottom', 'auto', 'important');
+    button.style.setProperty('width', '44px', 'important');
+    button.style.setProperty('height', '44px', 'important');
+    button.style.setProperty('min-width', '44px', 'important');
+    button.style.setProperty('min-height', '44px', 'important');
+    button.style.setProperty('max-width', '44px', 'important');
+    button.style.setProperty('max-height', '44px', 'important');
+    button.style.setProperty('margin', '0', 'important');
+    button.style.setProperty('padding', '0', 'important');
+    button.style.setProperty('display', 'flex', 'important');
+    button.style.setProperty('align-items', 'center', 'important');
+    button.style.setProperty('justify-content', 'center', 'important');
+    button.style.setProperty('cursor', 'pointer', 'important');
+    if (key === 'profile') {
+      button.style.setProperty('opacity', '1', 'important');
+      button.style.setProperty('visibility', 'visible', 'important');
+      button.style.setProperty('pointer-events', 'auto', 'important');
+      button.style.setProperty('transform', 'none', 'important');
+    } else {
+      button.style.removeProperty('opacity');
+      button.style.removeProperty('visibility');
+      button.style.removeProperty('pointer-events');
+      button.style.removeProperty('transform');
+    }
+    button.style.setProperty('z-index', '2147483647', 'important');
+    button.style.setProperty('-webkit-app-region', 'no-drag', 'important');
+    if (!button.dataset.agNativeDockHoverBound) {
+      button.dataset.agNativeDockHoverBound = 'true';
+      button.addEventListener('pointerenter', () => setDockOpen(true));
+      button.addEventListener('pointerleave', () => setDockOpen(false));
+      button.addEventListener('focusin', () => setDockOpen(true));
+      button.addEventListener('focusout', () => setDockOpen(false));
+    }
+  }
+
+  function cleanupNativeDockButton(button) {
+    button.className = String(button.className || '').split(/\s+/).filter(cls => cls && cls !== 'ag-native-dock-button' && !cls.startsWith('ag-native-dock-')).join(' ');
+    delete button.dataset.agDockKey;
+  }
+
+  function ensureDockContainer(layout = getLayout()) {
+    let dock = document.getElementById('ag-side-dock');
+    if (!dock) {
+      dock = document.createElement('div');
       dock.id = 'ag-side-dock';
       document.body.appendChild(dock);
+    } else if (dock.parentElement !== document.body) {
+      document.body.appendChild(dock);
     }
+    positionDockContainer(dock, layout);
+    return dock;
+  }
 
-    const buttons = getDockButtons();
-    const layout = getLayout();
-    buttons.forEach((entry, index) => createOrUpdateDockButton(entry, layout, index));
-    ids.forEach(id => {
-      if (!buttons.some(entry => id === `ag-${entry.key}-hitbox`)) document.getElementById(id)?.remove();
+  function positionDockContainer(dock, layout = getLayout()) {
+    if (!dock) return;
+    const profile = findNativeProfileButton();
+    const rect = profile?.getBoundingClientRect?.();
+    const dockX = rect?.width ? rect.left : clamp(layout.dock.x || DEFAULT_LAYOUT.dock.x, 8, 90);
+    const dockY = rect?.height ? rect.bottom + 8 : clamp(layout.dock.y || DEFAULT_LAYOUT.dock.y, 38, 72);
+    dock.style.setProperty('--ag-dock-x', `${dockX}px`);
+    dock.style.setProperty('--ag-dock-y', `${dockY}px`);
+    dock.style.left = `${dockX}px`;
+    dock.style.top = `${dockY}px`;
+  }
+
+  function setDockOpen(open) {
+    const dock = document.getElementById('ag-side-dock');
+    window.clearTimeout(window._agNativeDockCloseTimer);
+    if (dock) window.clearTimeout(dock._agCloseTimer);
+    if (open) {
+      document.body?.classList.add('ag-native-dock-open');
+      dock?.classList.add('ag-dock-open');
+    } else {
+      window._agNativeDockCloseTimer = window.setTimeout(() => document.body?.classList.remove('ag-native-dock-open'), 180);
+      if (dock) dock._agCloseTimer = window.setTimeout(() => dock.classList.remove('ag-dock-open'), 180);
+    }
+  }
+
+  function bindNativeProfileHover(button) {
+    if (!button) return;
+    button.classList.remove('ag-native-profile-docked');
+    button.classList.add('ag-native-profile-anchor');
+    ['position', 'left', 'top', 'right', 'bottom', 'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height', 'margin', 'transform', 'z-index'].forEach(prop => {
+      button.style.removeProperty(prop);
     });
-    if (!hitboxNotified && buttons.length) {
-      setTimeout(() => Spicetify.showNotification("AmbientGlass: Dock OK"), 1000);
-      hitboxNotified = true;
+    button.style.setProperty('opacity', '1', 'important');
+    button.style.setProperty('visibility', 'visible', 'important');
+    button.style.setProperty('pointer-events', 'auto', 'important');
+    button.style.setProperty('-webkit-app-region', 'no-drag', 'important');
+    button.removeAttribute('disabled');
+    if (!button.dataset.agDockHoverBound) {
+      button.dataset.agDockHoverBound = 'true';
+      button.addEventListener('pointerenter', () => setDockOpen(true));
+      button.addEventListener('pointerleave', () => setDockOpen(false));
+      button.addEventListener('focusin', () => setDockOpen(true));
+      button.addEventListener('focusout', () => setDockOpen(false));
     }
   }
 
@@ -696,15 +1463,18 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       .slice(0, 3)
       .map((x, i) => ({ key: ['notify', 'friends', 'profile'][i], original: x.el, html: dockButtonHtml(x.el, i) }));
 
-    const seen = new Set(rail.map(x => x.original));
+    const profileButton = findNativeProfileButton();
+    const visibleRail = rail.filter(entry => entry.original !== profileButton && !entry.original.querySelector?.('img'));
+
+    const seen = new Set(visibleRail.map(x => x.original));
     const add = (key, original, html) => {
       if (!original || seen.has(original)) return;
       seen.add(original);
-      rail.push({ key, original, html });
+      visibleRail.push({ key, original, html });
     };
     add('market', document.getElementById('marketplace-extension-button') || document.querySelector('button[aria-label*="Marketplace"], button[title*="Marketplace"]'), svg(ICONS.cart, { size: 18 }));
     add('stats', document.getElementById('stats-extension-button') || document.querySelector('.stats-button') || document.querySelector('button[aria-label*="Stat"], button[title*="Stat"]'), svg(ICONS.stats, { size: 18 }));
-    _dockButtonsCache = rail.slice(0, 5);
+    _dockButtonsCache = visibleRail;
     _dockButtonsDirty = false;
     return _dockButtonsCache;
   }
@@ -721,6 +1491,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
   function createOrUpdateDockButton(entry, layout, index) {
     if (!entry?.original) return;
+    const dock = ensureDockContainer(layout);
     const id = `ag-${entry.key}-hitbox`;
     let h = document.getElementById(id);
     if (!h) {
@@ -729,40 +1500,126 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       h.type = 'button';
       h.className = 'ag-dock-hitbox';
       h.addEventListener('click', event => {
+        if (entry.key === 'profile') return;
         event.preventDefault();
         event.stopPropagation();
+        const freshEntry = getDockButtons(true).find(item => item.key === entry.key) || entry;
+        const target = entry.key === 'profile'
+          ? (findNativeProfileButton() || freshEntry.original || entry.original)
+          : (freshEntry.original?.isConnected ? freshEntry.original : entry.original);
         const rect = h.getBoundingClientRect();
-        const evt = new MouseEvent('click', {
+        const targetRect = target?.getBoundingClientRect?.();
+        const eventX = targetRect?.width ? targetRect.left + targetRect.width / 2 : rect.left + rect.width / 2;
+        const eventY = targetRect?.height ? targetRect.top + targetRect.height / 2 : rect.top + rect.height / 2;
+        const restore = [];
+        if (entry.key === 'profile' && target?.style) {
+          ['pointer-events', 'visibility', 'opacity', 'z-index', '-webkit-app-region'].forEach(prop => {
+            restore.push([prop, target.style.getPropertyValue(prop), target.style.getPropertyPriority(prop)]);
+          });
+          target.style.setProperty('pointer-events', 'auto', 'important');
+          target.style.setProperty('visibility', 'visible', 'important');
+          target.style.setProperty('opacity', '0.01', 'important');
+          target.style.setProperty('z-index', '2147483647', 'important');
+          target.style.setProperty('-webkit-app-region', 'no-drag', 'important');
+          h.style.setProperty('pointer-events', 'none', 'important');
+        }
+        const eventInit = {
           bubbles: true,
           cancelable: true,
           view: window,
-          clientX: rect.left + rect.width / 2,
-          clientY: rect.top + rect.height / 2
+          clientX: eventX,
+          clientY: eventY,
+          screenX: Math.round(window.screenX + eventX),
+          screenY: Math.round(window.screenY + eventY),
+          button: 0,
+          buttons: 1,
+          composed: true,
+          pointerId: 1,
+          pointerType: 'mouse',
+          isPrimary: true
+        };
+        try { target?.focus?.({ preventScroll: true }); } catch {}
+        const realHit = entry.key === 'profile' ? document.elementFromPoint(eventX, eventY) : null;
+        const dispatchTarget = realHit?.closest?.('button, a') || target;
+        ['pointerover', 'pointerenter', 'mouseover', 'mouseenter', 'pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(type => {
+          const Evt = type.startsWith('pointer') && typeof PointerEvent !== 'undefined' ? PointerEvent : MouseEvent;
+          dispatchTarget?.dispatchEvent(new Evt(type, eventInit));
         });
-        entry.original.dispatchEvent(evt);
         if (entry.key === 'profile') {
-          setTimeout(() => {
-            injectSettingsToMenu();
-            repositionDockMenu(rect);
-          }, 180);
+          ['keydown', 'keyup'].forEach(type => {
+            dispatchTarget?.dispatchEvent(new KeyboardEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              key: 'Enter',
+              code: 'Enter',
+              composed: true
+            }));
+          });
+        }
+        if (typeof dispatchTarget?.click === 'function') dispatchTarget.click();
+        if (restore.length) {
+          window.setTimeout(() => {
+            restore.forEach(([prop, value, priority]) => {
+              if (value) target.style.setProperty(prop, value, priority);
+              else target.style.removeProperty(prop);
+            });
+            h.style.setProperty('pointer-events', 'auto', 'important');
+          }, 260);
         }
       });
-      document.body.appendChild(h);
+      dock.appendChild(h);
+    } else if (h.parentElement !== dock) {
+      dock.appendChild(h);
     }
     h.innerHTML = entry.html || '';
-    h.style.left = `${layout.dock.x}px`;
-    h.style.top = `${layout.dock.y + index * 52}px`;
+    h.classList.remove('ag-profile-spacer');
     h.style.pointerEvents = 'auto';
-    entry.original.style.setProperty('opacity', '0', 'important');
-    entry.original.style.setProperty('pointer-events', 'none', 'important');
-    entry.original.style.setProperty('visibility', 'hidden', 'important');
+    h.style.display = '';
+    h.style.left = 'auto';
+    h.style.top = 'auto';
+    h.style.order = String(index);
+    if (entry.key !== 'profile') {
+      entry.original.style.setProperty('opacity', '0', 'important');
+      entry.original.style.setProperty('pointer-events', 'none', 'important');
+      entry.original.style.setProperty('visibility', 'hidden', 'important');
+    }
+  }
+
+  function findNativeProfileButton() {
+    const userBox = document.querySelector('.main-userWidget-box');
+    const direct = userBox?.closest?.('button, a');
+    if (direct?.isConnected) return direct;
+    const labeled = Array.from(document.querySelectorAll('button, a')).find(el => {
+      const label = `${el.getAttribute('aria-label') || ''} ${el.title || ''}`.toLowerCase();
+      const rect = el.getBoundingClientRect();
+      return rect.left < 150 && rect.top > 28 && rect.top < 330 && (label.includes('profile') || label.includes('konto') || label.includes('account'));
+    });
+    if (labeled) return labeled;
+    const candidates = Array.from(document.querySelectorAll('button, a'))
+      .map(el => ({ el, rect: el.getBoundingClientRect(), html: el.innerHTML || '' }))
+      .filter(x => x.rect.width >= 28 &&
+                   x.rect.width <= 58 &&
+                   x.rect.height >= 28 &&
+                   x.rect.height <= 58 &&
+                   x.rect.left < 130 &&
+                   x.rect.top > 34 &&
+                   x.rect.top < 320 &&
+                   !x.el.classList.contains('ag-dock-hitbox') &&
+                   !String(x.el.id || '').startsWith('ag-') &&
+                   !!x.el.querySelector('img') &&
+                   !x.el.closest('.Root__main-view, .Root__now-playing-bar, .main-connectBar-connectBar, .Root__right-sidebar, [data-testid="queue-page"], [class*="Queue"], [class*="queue"]'));
+    return candidates.sort((a, b) => b.rect.top - a.rect.top)[0]?.el || null;
+  }
+
+  function findOpenProfileMenu() {
+    return Array.from(document.querySelectorAll('.main-contextMenu-menu, [role="menu"], [data-radix-menu-content]')).find(menu => {
+      const text = (menu.textContent || '').toLowerCase();
+      return text.includes('ambientglass settings') || text.includes('account') || text.includes('log out') || text.includes('profile');
+    });
   }
 
   function repositionDockMenu(anchorRect) {
-    const menu = Array.from(document.querySelectorAll('.main-contextMenu-menu, [role="menu"], [data-radix-menu-content]')).find(m => {
-      const text = (m.textContent || '').toLowerCase();
-      return text.includes('ambientglass settings') || text.includes('account') || text.includes('log out');
-    });
+    const menu = findOpenProfileMenu();
     if (!menu) return;
     const width = Math.max(260, menu.getBoundingClientRect().width || 260);
     const height = Math.min(menu.getBoundingClientRect().height || 420, window.innerHeight - 32);
@@ -793,7 +1650,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         .ag-yl-text-line2 { font-size: 12px !important; color: rgba(255,255,255,0.5) !important; margin: 0 !important; display: block !important; }
         .ag-yl-text-line2 * { display: inline !important; background: none !important; color: inherit !important; }
         
-        /* RADIKAL ALLES ALTE VERSTECKEN */
+        /* Hide stale native elements after rebuilding this block. */
         .ag-yl-node > *:not(h2):not(.ag-yl-main-row) {
           display: none !important; width: 0 !important; height: 0 !important; visibility: hidden !important; opacity: 0 !important;
         }
@@ -808,8 +1665,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
     document.querySelectorAll('h2').forEach(h2 => {
       const text = h2.innerText.trim();
-      if ((text.includes('You Liked') || text.includes('Gefällt dir')) && 
-          !text.includes('Artist pick') && !text.includes('Auswahl des Künstlers')) {
+      if ((text.includes('You Liked') || text.includes('Gef\u00e4llt dir')) && 
+          !text.includes('Artist pick') && !text.includes('Auswahl des K\u00fcnstlers')) {
         
         const node = h2.parentElement;
         if (!node || node.querySelector('.ag-yl-main-row')) return;
@@ -826,22 +1683,22 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         const textRow = document.createElement('div');
         textRow.className = 'ag-yl-text-row';
         
-        // Text-Extraktion (Manuell für maximale Stabilität)
+        // Manual text extraction for maximum stability.
         let songsCount = "";
         let releasesCount = "";
         let artistName = "";
 
         node.querySelectorAll('span, div, a').forEach(el => {
           const t = el.innerText.trim();
-          if (!t || t.includes('You Liked') || t.includes('Gefällt dir')) return;
+          if (!t || t.includes('You Liked') || t.includes('Gef\u00e4llt dir')) return;
           if (t.toLowerCase().includes('song')) songsCount = t;
           else if (t.toLowerCase().includes('release')) releasesCount = t;
-          else if (t.length > 1 && !t.includes('•')) artistName = t;
+          else if (t.length > 1 && !t.includes('\u2022')) artistName = t;
         });
 
         const line1 = document.createElement('div');
         line1.className = 'ag-yl-text-line1';
-        line1.innerText = `${songsCount}${songsCount && releasesCount ? ' • ' : ''}${releasesCount}`;
+        line1.innerText = `${songsCount}${songsCount && releasesCount ? ' - ' : ''}${releasesCount}`;
         
         const line2 = document.createElement('div');
         line2.className = 'ag-yl-text-line2';
@@ -924,6 +1781,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     applyLayout(layout);
 
     const path = Spicetify.Platform.History.location.pathname || '';
+    const isSearchPage = path.startsWith('/search/');
     const isNarrow = window.innerWidth < 750;
     const isFull = isFullscreen() || 
                    path.includes('marketplace') || 
@@ -934,9 +1792,10 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const isModal = isModalOpen();
     const shouldHide = !_layoutEditMode && (isFull || isNarrow || isModal);
     const y = getMainScrollY();
-    const o = shouldHide ? 0 : Math.max(0, 1 - y / 360);
-    const hidden = shouldHide || o < 0.05;
-    const pinHomeTop = shouldHide || y > 12;
+    const searchFadeDistance = isSearchPage ? 220 : 150;
+    const o = shouldHide ? 0 : Math.max(0, 1 - y / searchFadeDistance);
+    const hidden = shouldHide || y > searchFadeDistance || o < 0.05;
+    const pinHomeTop = shouldHide || isSearchPage || y > 12;
     const visibilitySignature = [
       shouldHide ? 1 : 0,
       pinHomeTop ? 1 : 0,
@@ -964,16 +1823,16 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     } else {
       setStyleIfChanged(search, 'opacity', String(o));
       setStyleIfChanged(search, 'visibility', hidden ? 'hidden' : 'visible');
-      setStyleIfChanged(search, 'pointer-events', o < 0.1 ? 'none' : 'auto');
+      setStyleIfChanged(search, 'pointer-events', hidden || o < 0.1 ? 'none' : 'auto');
       setStyleIfChanged(search, 'left', `${layout.search.x}%`);
       setStyleIfChanged(search, 'top', `${layout.search.y}%`);
       setStyleIfChanged(search, 'transform', `translate(-50%, -50%) translateY(-${Math.min(y * 0.18, 80)}px) scale(1)`);
       setStyleIfChanged(cluster, 'opacity', '1');
       setStyleIfChanged(cluster, 'visibility', 'visible');
       setStyleIfChanged(cluster, 'pointer-events', 'auto');
-      if (y > 12) {
+      if (pinHomeTop) {
         setStyleIfChanged(cluster, 'left', '50%', 'important');
-        setStyleIfChanged(cluster, 'top', '60px', 'important');
+        setStyleIfChanged(cluster, 'top', isSearchPage ? '48px' : '60px', 'important');
         setStyleIfChanged(cluster, 'right', 'auto', 'important');
         setStyleIfChanged(cluster, 'bottom', 'auto', 'important');
         setStyleIfChanged(cluster, 'width', '340px', 'important');
@@ -990,57 +1849,424 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       }
     }
   }
-  async function setupAnimatedPlaceholder(input) {
-    const baseLabels = ['Search...', 'Songs...', 'Artists...', 'Albums...', 'Playlists...'];
-    let items = [...baseLabels];
-    try {
-      const lib = await Spicetify.Platform.LibraryAPI.getContents({ limit: 15 });
-      const recent = (lib.items || []).slice(0, 5).map(i => i.name).filter(Boolean).map(n => n + '...');
-      if (recent.length > 0) items = ['Search...', ...recent, ...baseLabels.slice(1)];
-    } catch {}
-    let idx = 0;
-    setInterval(() => {
-      if (document.activeElement === input) return;
-      input.placeholder = items[idx % items.length];
-      idx++;
-    }, 2000);
+  let _searchSuggestionItems = [];
+  let _searchSuggestionLoaded = false;
+  let _searchSuggestionActiveIndex = -1;
+  let _searchSuggestionRequestId = 0;
+  let _searchPageRequestId = 0;
+  const _searchSuggestionCache = new Map();
+
+  function normalizeSpotifySearchItems(section, type) {
+    return (section?.items || [])
+      .filter(item => item?.name && item?.uri)
+      .map(item => ({
+        name: item.name,
+        uri: item.uri,
+        type,
+        image: item.images?.[0]?.url || item.album?.images?.[0]?.url || ''
+      }));
   }
 
-  // ── FRIENDS PANEL OVERLAP FIX ──
+  function normalizeLooseSearchItems(items, fallbackType = 'item') {
+    return (items || []).map(raw => {
+      const item = raw?.data || raw?.item || raw;
+      const uri = item?.uri || item?.id || raw?.uri;
+      const name = item?.name || item?.title || item?.profile?.name || item?.albumOfTrack?.name;
+      const type = item?.type || raw?.type || fallbackType;
+      const image = item?.images?.items?.[0]?.sources?.[0]?.url ||
+                    item?.visuals?.avatarImage?.sources?.[0]?.url ||
+                    item?.coverArt?.sources?.[0]?.url ||
+                    item?.albumOfTrack?.coverArt?.sources?.[0]?.url ||
+                    item?.images?.[0]?.url ||
+                    item?.album?.images?.[0]?.url ||
+                    '';
+      return name && uri ? { name, uri, type, image } : null;
+    }).filter(Boolean);
+  }
+
+  async function searchSpotifySuggestions(query) {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return [];
+    if (_searchSuggestionCache.has(normalized)) return _searchSuggestionCache.get(normalized);
+
+    try {
+      const endpoint = 'https://api.spotify.com/v1/search?' + new URLSearchParams({
+        q: query.trim(),
+        type: 'artist,album,playlist,track',
+        limit: '4'
+      }).toString();
+      const data = await Spicetify.CosmosAsync.get(endpoint);
+      const results = [
+        ...normalizeSpotifySearchItems(data?.artists, 'artist'),
+        ...normalizeSpotifySearchItems(data?.albums, 'album'),
+        ...normalizeSpotifySearchItems(data?.tracks, 'track'),
+        ...normalizeSpotifySearchItems(data?.playlists, 'playlist')
+      ].slice(0, 8);
+      if (results.length) {
+        _searchSuggestionCache.set(normalized, results);
+        return results;
+      }
+    } catch {}
+
+    try {
+      const data = await Spicetify.CosmosAsync.get('sp://core-search/v1/search?' + new URLSearchParams({
+        query: query.trim(),
+        type: 'artist,album,playlist,track',
+        limit: '6'
+      }).toString());
+      const results = [
+        ...normalizeLooseSearchItems(data?.artists?.items || data?.artists, 'artist'),
+        ...normalizeLooseSearchItems(data?.albums?.items || data?.albums, 'album'),
+        ...normalizeLooseSearchItems(data?.tracks?.items || data?.tracks, 'track'),
+        ...normalizeLooseSearchItems(data?.playlists?.items || data?.playlists, 'playlist'),
+        ...normalizeLooseSearchItems(data?.topResults?.items || data?.topResults, 'result')
+      ].slice(0, 8);
+      _searchSuggestionCache.set(normalized, results);
+      return results;
+    } catch {}
+
+    _searchSuggestionCache.set(normalized, []);
+    return [];
+  }
+
+  async function loadSearchSuggestionItems() {
+    if (_searchSuggestionLoaded) return _searchSuggestionItems;
+    _searchSuggestionLoaded = true;
+    try {
+      const lib = await Spicetify.Platform.LibraryAPI.getContents({ limit: 600 });
+      _searchSuggestionItems = (lib.items || [])
+        .filter(item => item?.name && item?.uri)
+        .map(item => ({
+          name: item.name,
+          uri: item.uri,
+          type: item.uri.split(':')[1] || 'item',
+          image: item.images?.[0]?.url || item.image?.url || ''
+        }));
+    } catch {
+      _searchSuggestionItems = [];
+    }
+    return _searchSuggestionItems;
+  }
+
+  function setupSearchSuggestions(input, panel) {
+    if (!input || !panel) return;
+
+    const close = () => {
+      panel.classList.remove('ag-search-suggestions-visible');
+      panel.replaceChildren();
+      _searchSuggestionActiveIndex = -1;
+    };
+
+    const clearInputAfterSearch = () => {
+      window.setTimeout(() => {
+        input.value = '';
+        close();
+      }, 80);
+    };
+
+    const navigateQuery = () => {
+      const query = input.value.trim();
+      if (!query) return;
+      close();
+      safeNavigate('/search/' + encodeURIComponent(query));
+      clearInputAfterSearch();
+    };
+
+    const setActive = index => {
+      const buttons = Array.from(panel.querySelectorAll('.ag-search-suggestion'));
+      _searchSuggestionActiveIndex = buttons.length ? clamp(index, 0, buttons.length - 1) : -1;
+      buttons.forEach((button, i) => button.classList.toggle('ag-search-suggestion-active', i === _searchSuggestionActiveIndex));
+    };
+
+    const render = async () => {
+      const query = input.value.trim().toLowerCase();
+      if (query.length < 1) {
+        close();
+        return;
+      }
+
+      const requestId = ++_searchSuggestionRequestId;
+      const spotifyMatches = await searchSpotifySuggestions(input.value.trim());
+      if (requestId !== _searchSuggestionRequestId) return;
+      const localItems = await loadSearchSuggestionItems();
+      if (requestId !== _searchSuggestionRequestId) return;
+      const seenUris = new Set(spotifyMatches.map(item => item.uri));
+      const localMatches = localItems
+        .filter(item => !seenUris.has(item.uri) && item.name.toLowerCase().includes(query))
+        .sort((a, b) => {
+          const an = a.name.toLowerCase();
+          const bn = b.name.toLowerCase();
+          const aStarts = an.startsWith(query) ? 0 : 1;
+          const bStarts = bn.startsWith(query) ? 0 : 1;
+          return aStarts - bStarts || an.localeCompare(bn);
+        });
+      const matches = [...spotifyMatches, ...localMatches].slice(0, 6);
+
+      panel.replaceChildren();
+
+      const searchButton = document.createElement('button');
+      searchButton.type = 'button';
+      searchButton.className = 'ag-search-suggestion ag-search-suggestion-query';
+      searchButton.innerHTML = svg(ICONS.search, { size: 16 });
+      const searchText = document.createElement('span');
+      searchText.textContent = `Search "${input.value.trim()}"`;
+      searchButton.appendChild(searchText);
+      searchButton.addEventListener('mousedown', event => event.preventDefault());
+      searchButton.addEventListener('click', navigateQuery);
+      panel.appendChild(searchButton);
+
+      matches.forEach(item => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'ag-search-suggestion';
+        button.addEventListener('mousedown', event => event.preventDefault());
+        button.addEventListener('click', () => {
+          close();
+          safeNavigate(item.uri);
+          clearInputAfterSearch();
+        });
+
+        const art = document.createElement('span');
+        art.className = 'ag-search-suggestion-art';
+        if (item.image) {
+          art.style.backgroundImage = `url("${item.image.replace(/"/g, '\\"')}")`;
+          const img = document.createElement('img');
+          img.src = item.image;
+          img.alt = '';
+          img.loading = 'lazy';
+          art.appendChild(img);
+        }
+
+        const copy = document.createElement('span');
+        copy.className = 'ag-search-suggestion-copy';
+
+        const title = document.createElement('span');
+        title.className = 'ag-search-suggestion-title';
+        title.textContent = item.name;
+
+        const type = document.createElement('span');
+        type.className = 'ag-search-suggestion-type';
+        type.textContent = item.type;
+
+        copy.append(title, type);
+        button.append(art, copy);
+        panel.appendChild(button);
+      });
+
+      panel.classList.add('ag-search-suggestions-visible');
+      setActive(0);
+    };
+
+    let debounce = 0;
+    input.addEventListener('input', () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(render, 80);
+    });
+    input.addEventListener('focus', render);
+    input.addEventListener('blur', () => window.setTimeout(close, 120));
+    input.addEventListener('keydown', event => {
+      const buttons = Array.from(panel.querySelectorAll('.ag-search-suggestion'));
+      if (event.key === 'Escape') {
+        close();
+        input.blur();
+        return;
+      }
+      if (event.key === 'ArrowDown' && buttons.length) {
+        event.preventDefault();
+        setActive(_searchSuggestionActiveIndex + 1);
+        return;
+      }
+      if (event.key === 'ArrowUp' && buttons.length) {
+        event.preventDefault();
+        setActive(_searchSuggestionActiveIndex - 1);
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const active = buttons[_searchSuggestionActiveIndex];
+        if (active && panel.classList.contains('ag-search-suggestions-visible')) active.click();
+        else navigateQuery();
+      }
+    });
+  }
+
+  function getSearchPageQuery() {
+    const path = Spicetify.Platform.History.location.pathname || '';
+    if (!path.startsWith('/search/')) return '';
+    return decodeURIComponent(path.replace(/^\/search\/?/, '').split('/')[0] || '').trim();
+  }
+
+  function findMainContentRoot() {
+    return document.querySelector('.main-view-container__scroll-node-child') ||
+           document.querySelector('.Root__main-view main') ||
+           document.querySelector('.Root__main-view');
+  }
+
+  function updateSearchPageVisualCenter() {
+    const shell = document.getElementById('ag-search-page-redesign');
+    if (!shell) {
+      document.documentElement.style.removeProperty('--ag-search-page-shift');
+      return;
+    }
+    const rect = shell.getBoundingClientRect();
+    if (!rect.width) return;
+    const viewportCenter = window.innerWidth / 2;
+    const shellCenter = rect.left + rect.width / 2;
+    const shift = clamp(viewportCenter - shellCenter, -160, 160);
+    document.documentElement.style.setProperty('--ag-search-page-shift', `${shift}px`);
+  }
+
+  function createSearchPageCard(item) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'ag-search-page-card';
+    card.addEventListener('click', () => safeNavigate(item.uri));
+
+    const art = document.createElement('span');
+    art.className = 'ag-search-page-card-art';
+    if (item.image) {
+      art.style.backgroundImage = `url("${item.image.replace(/"/g, '\\"')}")`;
+      const img = document.createElement('img');
+      img.src = item.image;
+      img.alt = '';
+      img.loading = 'lazy';
+      art.appendChild(img);
+    }
+
+    const copy = document.createElement('span');
+    copy.className = 'ag-search-page-card-copy';
+
+    const title = document.createElement('span');
+    title.className = 'ag-search-page-card-title';
+    title.textContent = item.name;
+
+    const type = document.createElement('span');
+    type.className = 'ag-search-page-card-type';
+    type.textContent = item.type;
+
+    copy.append(title, type);
+    card.append(art, copy);
+    return card;
+  }
+
+  async function updateSearchPageRedesign() {
+    const query = getSearchPageQuery();
+    const existing = document.getElementById('ag-search-page-redesign');
+    if (!query) {
+      existing?.remove();
+      document.body?.classList.remove('ag-search-page');
+      return;
+    }
+
+    const root = findMainContentRoot();
+    if (!root) return;
+    document.body?.classList.add('ag-search-page');
+
+    let shell = existing;
+    if (!shell) {
+      shell = document.createElement('section');
+      shell.id = 'ag-search-page-redesign';
+      root.prepend(shell);
+    } else if (shell.parentElement !== root) {
+      root.prepend(shell);
+    }
+    requestAnimationFrame(updateSearchPageVisualCenter);
+
+    const requestId = ++_searchPageRequestId;
+    shell.replaceChildren();
+
+    const hero = document.createElement('div');
+    hero.className = 'ag-search-page-hero';
+
+    const eyebrow = document.createElement('div');
+    eyebrow.className = 'ag-search-page-eyebrow';
+    eyebrow.textContent = 'AmbientGlass Search';
+
+    const title = document.createElement('h1');
+    title.textContent = query;
+
+    const subtitle = document.createElement('p');
+    subtitle.textContent = 'Top matches, albums, artists and playlists blended into the glass view.';
+
+    const cards = document.createElement('div');
+    cards.className = 'ag-search-page-cards';
+    const loading = document.createElement('div');
+    loading.className = 'ag-search-page-loading';
+    loading.textContent = 'Finding covers...';
+    cards.appendChild(loading);
+
+    hero.append(eyebrow, title, subtitle, cards);
+    shell.appendChild(hero);
+    requestAnimationFrame(updateSearchPageVisualCenter);
+
+    const results = await searchSpotifySuggestions(query);
+    if (requestId !== _searchPageRequestId || !document.body?.classList.contains('ag-search-page')) return;
+
+    cards.replaceChildren();
+    if (!results.length) {
+      const empty = document.createElement('div');
+      empty.className = 'ag-search-page-loading';
+      empty.textContent = 'No preview results found yet.';
+      cards.appendChild(empty);
+      return;
+    }
+
+    results.slice(0, 8).forEach(item => cards.appendChild(createSearchPageCard(item)));
+  }
+
+  // Friends panel overlap fix.
   function fixFriendsPanel() {
     if (!document.getElementById('ag-friends-fix-style')) {
       const style = document.createElement('style');
       style.id = 'ag-friends-fix-style';
       style.textContent = `
-        /* Verhindert, dass der "Jetzt läuft"-Track im Freunde-Panel überlappt */
+        /* Prevent the current track from overlapping the Friends panel. */
         .main-buddyFeed-buddyFeed {
           padding-bottom: 0 !important;
           overflow-y: auto !important;
         }
-        /* Now-playing bar UNTER dem Freundes-Panel fixieren */
+        /* Keep the now-playing bar below the Friends panel. */
         .Root__now-playing-bar {
           z-index: 100 !important;
         }
-        /* Wenn Friends-Panel offen: Now-playing nicht über dem Panel */
+        /* Keep now-playing content out of the Friends panel while it is open. */
         .main-globalNav-globalNav ~ .Root__right-sidebar .main-buddyFeed-buddyFeed {
           margin-bottom: 0 !important;
         }
-        /* Verhindern, dass der aktuelle Track den Freunde-Feed überlagert */
+        /* Prevent the current track from covering the Friends feed. */
         [data-testid="buddy-feed-container"],
         .main-buddyFeed-buddyFeedHeader {
           z-index: 10 !important;
           position: relative !important;
         }
-        /* Now-playing-Bar und andere Ansichten komplett ausblenden wenn Freunde offen sind */
-        .Root__right-sidebar:has([class*="buddyFeed"]) [data-testid="now-playing-view"],
-        .Root__right-sidebar:has([class*="buddyFeed"]) .main-nowPlayingView-section {
+        /* Hide now-playing views while the Friends panel is open. */
+        .Root__right-sidebar:has([class*="buddyFeed"]) [data-testid="now-playing-view"]:not(:has([class*="buddyFeed"])),
+        .Root__right-sidebar:has([class*="buddyFeed"]) .main-nowPlayingView-section:not(:has([class*="buddyFeed"])),
+        .Root__right-sidebar.ag-friends-open [data-testid="now-playing-view"]:not(:has([class*="buddyFeed"])),
+        .Root__right-sidebar.ag-friends-open .main-nowPlayingView-section:not(:has([class*="buddyFeed"])) {
           display: none !important;
           visibility: hidden !important;
           height: 0 !important;
+          min-height: 0 !important;
+          max-height: 0 !important;
+          opacity: 0 !important;
           overflow: hidden !important;
+          pointer-events: none !important;
         }
         .Root__right-sidebar {
           overflow: hidden !important;
+        }
+        .Root__right-sidebar.ag-friends-open [class*="buddyFeed"],
+        .Root__right-sidebar.ag-friends-open [data-testid*="buddy" i],
+        .Root__right-sidebar.ag-friends-open [class*="friend" i] {
+          display: block !important;
+          visibility: visible !important;
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          overflow: visible !important;
         }
       `;
       document.head.appendChild(style);
@@ -1067,7 +2293,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
                                   label.includes('hide') ||
                                   label.includes('now playing') ||
                                   label.includes('friend') ||
-                                  ['<', '>', '‹', '›'].includes((btn.textContent || '').trim());
+                                  ['<', '>', '\u2039', '\u203a'].includes((btn.textContent || '').trim());
         if (!nearEdge && !looksLikeCollapse) return;
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -1076,11 +2302,57 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       }, true);
     }
     const observer = new MutationObserver(() => {
-      const isBuddy = sidebar.querySelector('[class*="buddyFeed"]');
-      const nowPlaying = sidebar.querySelector('[class*="nowPlayingView"], [data-testid="now-playing-view"]');
-      if (isBuddy && nowPlaying) { nowPlaying.style.display = 'none'; }
+      syncFriendsSidebarState(sidebar);
     });
     observer.observe(sidebar, { childList: true, subtree: true });
+    syncFriendsSidebarState(sidebar);
+  }
+
+  function syncFriendsSidebarState(sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"]')) {
+    if (!sidebar) return;
+    const isBuddy = !!sidebar.querySelector('[class*="buddyFeed"], [data-testid*="buddy" i], [aria-label*="Friend"], [aria-label*="Freund"], [class*="friend" i]');
+    sidebar.classList.toggle('ag-friends-open', isBuddy);
+    sidebar.querySelectorAll('[data-ag-hidden-for-friends="true"]').forEach(el => {
+      const containsBuddy = !!el.querySelector?.('[class*="buddyFeed"], [data-testid*="buddy" i], [class*="friend" i]');
+      if (!isBuddy || containsBuddy) {
+        delete el.dataset.agHiddenForFriends;
+        ['display', 'visibility', 'height', 'min-height', 'max-height', 'opacity', 'overflow', 'pointer-events'].forEach(prop => el.style.removeProperty(prop));
+      }
+    });
+    sidebar.querySelectorAll('[class*="buddyFeed"], [data-testid*="buddy" i], [class*="friend" i]').forEach(el => {
+      ['display', 'visibility', 'height', 'min-height', 'max-height', 'opacity', 'overflow', 'pointer-events'].forEach(prop => el.style.removeProperty(prop));
+    });
+    const nowPlayingEls = sidebar.querySelectorAll('[data-testid="now-playing-view"], .main-nowPlayingView-section');
+    nowPlayingEls.forEach(el => {
+      const containsBuddy = !!el.querySelector?.('[class*="buddyFeed"], [data-testid*="buddy" i], [class*="friend" i]');
+      if (containsBuddy) return;
+      if (isBuddy) {
+        el.dataset.agHiddenForFriends = 'true';
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('height', '0', 'important');
+        el.style.setProperty('min-height', '0', 'important');
+        el.style.setProperty('max-height', '0', 'important');
+        el.style.setProperty('opacity', '0', 'important');
+        el.style.setProperty('overflow', 'hidden', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+      } else if (el.dataset.agHiddenForFriends === 'true') {
+        delete el.dataset.agHiddenForFriends;
+        ['display', 'visibility', 'height', 'min-height', 'max-height', 'opacity', 'overflow', 'pointer-events'].forEach(prop => el.style.removeProperty(prop));
+      }
+    });
+    sidebar.querySelectorAll('[data-ag-sidebar-nonfriends="true"]').forEach(el => {
+      delete el.dataset.agSidebarNonfriends;
+      ['display', 'visibility', 'opacity', 'pointer-events', 'height', 'max-height', 'overflow'].forEach(prop => el.style.removeProperty(prop));
+    });
+    if (isBuddy) {
+      sidebar.querySelectorAll('[class*="buddyFeed"], [data-testid*="buddy" i], [class*="friend" i]').forEach(el => {
+        el.style.setProperty('display', 'block', 'important');
+        el.style.setProperty('visibility', 'visible', 'important');
+        el.style.setProperty('opacity', '1', 'important');
+        el.style.setProperty('pointer-events', 'auto', 'important');
+      });
+    }
   }
 
   function syncSidebarCollapse() {
@@ -1104,12 +2376,32 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function fixMarketplaceDropdown() {
-    return; // AG-FIX: Deaktiviert, da CSS nun das Layout übernimmt
     const path = Spicetify.Platform.History.location.pathname;
-    if (!path.includes("marketplace")) return;
+    if (!path.includes("marketplace")) {
+      document.body?.classList.remove('ag-marketplace-page');
+      document.getElementById("ag-marketplace-tabs")?.remove();
+      fixMarketplaceSpacing();
+      return;
+    }
+    document.body?.classList.add('ag-marketplace-page');
 
-    // Fix 1: Handle Link-based Tabs (New Marketplace)
-    const links = document.querySelectorAll(".marketplace-tabBar-headerItemLink");
+    const defaultTabs = ['Extensions', 'Themes', 'Snippets', 'Apps', 'Installed'];
+    try {
+      const savedTabs = JSON.parse(localStorage.getItem('marketplace:tabs') || '[]');
+      const normalized = defaultTabs.map(name => {
+        const saved = Array.isArray(savedTabs) ? savedTabs.find(tab => tab?.name === name) : null;
+        return { name, enabled: true, ...(saved || {}) };
+      }).map(tab => ({ ...tab, enabled: true }));
+      if (JSON.stringify(savedTabs) !== JSON.stringify(normalized)) {
+        localStorage.setItem('marketplace:tabs', JSON.stringify(normalized));
+      }
+      if (!localStorage.getItem('marketplace:active-tab')) localStorage.setItem('marketplace:active-tab', defaultTabs[0]);
+    } catch {
+      localStorage.setItem('marketplace:tabs', JSON.stringify(defaultTabs.map(name => ({ name, enabled: true }))));
+    }
+
+    // Fix 1: Handle link-based tabs.
+    const links = document.querySelectorAll(".marketplace-tabBar-headerItemLink, [class*='marketplace-tabBar-headerItemLink']");
     links.forEach(link => {
         link.style.setProperty("display", "inline-block", "important");
         link.style.setProperty("visibility", "visible", "important");
@@ -1119,7 +2411,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         }
     });
 
-    // Fix 2: Handle Dropdown-based Tabs (Old Marketplace)
+    hideMarketplaceMoreDropdown();
+
+    // Fix 3: Handle dropdown/select-based tabs.
     const allSelects = document.querySelectorAll(".marketplace-header select");
     let tabSelect = null;
     allSelects.forEach(s => {
@@ -1128,20 +2422,48 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         }
     });
 
-    if (tabSelect && !document.getElementById("ag-marketplace-tabs")) {
-        tabSelect.style.setProperty("display", "none", "important");
+    if (tabSelect) tabSelect.style.setProperty("display", "none", "important");
+
+    const wireMarketplaceTab = (btn, opt, tabs) => {
+      btn.onclick = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const previousTab = getMarketplaceContentTitle();
+        localStorage.setItem('marketplace:active-tab', opt.label);
+        tabs.querySelectorAll('.ag-market-tab-btn').forEach(item => item.classList.toggle('active', item === btn));
+        if (tabSelect) {
+          tabSelect.value = opt.value;
+          tabSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        const native = Array.from(document.querySelectorAll(".marketplace-tabBar-headerItemLink, [class*='marketplace-tabBar-headerItemLink'], button, a"))
+          .filter(el => !el.closest('#ag-marketplace-tabs'))
+          .find(el => (el.textContent || '').trim().toLowerCase() === opt.label.toLowerCase());
+        if (native) native.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+        setTimeout(() => {
+          hideMarketplaceMoreDropdown();
+          const nextTab = getMarketplaceContentTitle();
+          const wanted = opt.label.toLowerCase();
+          const stillOld = previousTab && nextTab && nextTab.toLowerCase() === previousTab.toLowerCase();
+          const wrongContent = nextTab && !nextTab.toLowerCase().includes(wanted);
+          if ((stillOld || wrongContent) && !window.__agMarketplaceReloading) {
+            window.__agMarketplaceReloading = true;
+            sessionStorage.setItem('ag-skip-startup-once', 'marketplace-tab');
+            location.reload();
+          }
+        }, 260);
+      };
+    };
+
+    if (!document.getElementById("ag-marketplace-tabs")) {
         const tabs = document.createElement("div");
         tabs.id = "ag-marketplace-tabs";
-        Array.from(tabSelect.options).forEach(opt => {
+        const sourceTabs = tabSelect ? Array.from(tabSelect.options).map(opt => ({ label: opt.text, value: opt.value })) : defaultTabs.map(name => ({ label: name, value: name }));
+        sourceTabs.forEach(opt => {
             const btn = document.createElement("button");
             btn.className = "ag-market-tab-btn";
-            if (tabSelect.value === opt.value) btn.classList.add("active");
-            btn.innerText = opt.text;
-            btn.onclick = () => {
-                tabSelect.value = opt.value;
-                tabSelect.dispatchEvent(new Event("change", { bubbles: true }));
-                setTimeout(fixMarketplaceDropdown, 50);
-            };
+            if ((localStorage.getItem('marketplace:active-tab') || defaultTabs[0]) === opt.label || tabSelect?.value === opt.value) btn.classList.add("active");
+            btn.innerText = opt.label;
+            wireMarketplaceTab(btn, opt, tabs);
             tabs.appendChild(btn);
         });
         const header = document.querySelector(".marketplace-header");
@@ -1150,10 +2472,95 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
             if (search) header.insertBefore(tabs, search);
             else header.appendChild(tabs);
         }
+    } else {
+      const tabs = document.getElementById("ag-marketplace-tabs");
+      const sourceTabs = tabSelect ? Array.from(tabSelect.options).map(opt => ({ label: opt.text, value: opt.value })) : defaultTabs.map(name => ({ label: name, value: name }));
+      tabs.querySelectorAll('.ag-market-tab-btn').forEach((btn, index) => {
+        const opt = sourceTabs[index] || { label: btn.textContent.trim(), value: btn.textContent.trim() };
+        wireMarketplaceTab(btn, opt, tabs);
+      });
     }
+    alignMarketplaceTabsToHome();
+    [80, 240, 600].forEach(delay => setTimeout(alignMarketplaceTabsToHome, delay));
   }
 
-  // ── SETTINGS & PRIVACY ──
+  function alignMarketplaceTabsToHome() {
+    const path = Spicetify.Platform.History.location.pathname;
+    if (!path.includes("marketplace")) return;
+    const home = document.getElementById('ag-home-button') ||
+                 document.querySelector('#ag-home-cluster .ag-home-main') ||
+                 document.querySelector('#ag-home-cluster button');
+    const tabs = document.getElementById('ag-marketplace-tabs');
+    const header = document.querySelector('.marketplace-header');
+    if (!home || !tabs || !header) return;
+    const snippets = Array.from(tabs.querySelectorAll('.ag-market-tab-btn'))
+      .find(btn => (btn.textContent || '').trim().toLowerCase() === 'snippets');
+    if (!snippets) return;
+    const homeRect = home.getBoundingClientRect();
+    const snippetsRect = snippets.getBoundingClientRect();
+    const headerRect = header.getBoundingClientRect();
+    if (!homeRect.width || !snippetsRect.width || !headerRect.width) return;
+    const homeCenter = homeRect.left + homeRect.width / 2;
+    const snippetsCenter = snippetsRect.left + snippetsRect.width / 2;
+    const delta = Math.round(homeCenter - snippetsCenter);
+    if (Math.abs(delta) < 2) return;
+    header.style.setProperty('left', `${Math.round(headerRect.left + delta)}px`, 'important');
+    header.style.setProperty('right', 'auto', 'important');
+    header.style.setProperty('transform', 'none', 'important');
+  }
+
+  function hideMarketplaceMoreDropdown() {
+    const path = Spicetify.Platform.History.location.pathname;
+    if (!path.includes("marketplace")) return;
+    document.querySelectorAll('[data-ag-marketplace-more="true"]').forEach(el => {
+      const text = `${el.textContent || ''} ${el.getAttribute?.('aria-label') || ''} ${el.title || ''}`.trim().toLowerCase();
+      const isStillMore = text === 'more' || text === 'mehr' || text.includes('more') || text.includes('mehr') || !!el.querySelector?.('[aria-haspopup="menu"], button[aria-haspopup="menu"]');
+      if (isStillMore) return;
+      delete el.dataset.agMarketplaceMore;
+      ['display', 'visibility', 'opacity', 'pointer-events', 'width', 'height', 'overflow'].forEach(prop => el.style.removeProperty(prop));
+    });
+
+    const homeCluster = document.getElementById('ag-home-cluster');
+    if (homeCluster?.dataset.agMarketplaceMore === 'true') {
+      delete homeCluster.dataset.agMarketplaceMore;
+      ['display', 'visibility', 'opacity', 'pointer-events', 'width', 'height', 'overflow'].forEach(prop => homeCluster.style.removeProperty(prop));
+    }
+
+    Array.from(document.querySelectorAll('button, [role="button"], select, .marketplace-tabBar-headerItem, [class*="marketplace-tabBar-headerItem"]')).forEach(el => {
+      const text = `${el.textContent || ''} ${el.getAttribute?.('aria-label') || ''} ${el.title || ''}`.trim().toLowerCase();
+      const rect = el.getBoundingClientRect();
+      const isCompactMore = rect.top < 260 && rect.width < 220 && (text === 'more' || text === 'mehr' || text.includes('more') || text.includes('mehr'));
+      const isMoreMenuTrigger = rect.top < 260 &&
+        !!el.querySelector?.('[aria-haspopup="menu"], button[aria-haspopup="menu"]') &&
+        (text === 'more' || text === 'mehr' || text.includes('more') || text.includes('mehr'));
+      if (!isCompactMore && !isMoreMenuTrigger) return;
+      const target = el.closest?.('.marketplace-tabBar-headerItem, [class*="marketplace-tabBar-headerItem"]') || el;
+      target.dataset.agMarketplaceMore = 'true';
+      target.style.setProperty('display', 'none', 'important');
+      target.style.setProperty('visibility', 'hidden', 'important');
+      target.style.setProperty('opacity', '0', 'important');
+      target.style.setProperty('pointer-events', 'none', 'important');
+      target.style.setProperty('width', '0', 'important');
+      target.style.setProperty('height', '0', 'important');
+      target.style.setProperty('overflow', 'hidden', 'important');
+    });
+  }
+
+  function getMarketplaceContentTitle() {
+    const headings = Array.from(document.querySelectorAll('.Root__main-view h1, .Root__main-view h2, h1, h2'))
+      .map(el => (el.textContent || '').trim())
+      .filter(Boolean);
+    return headings.find(text => ['extensions', 'themes', 'snippets', 'apps', 'installed'].includes(text.toLowerCase())) || '';
+  }
+
+  function fixMarketplaceSpacing() {
+    document.querySelectorAll('[data-ag-marketplace-pulled="true"]').forEach(el => {
+      delete el.dataset.agMarketplacePulled;
+      ['margin-top', 'padding-top', 'transform'].forEach(prop => el.style.removeProperty(prop));
+    });
+  }
+
+  // Settings.
   function ensureLayoutEditorStyle() {
     if (document.getElementById('ag-layout-editor-style')) return;
     const style = document.createElement('style');
@@ -1421,27 +2828,76 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     glow: '#7b5fdb', s1: '#7b5fdb', s2: '#4f8edb', accent: '#7b5fdb',
     home: '#1DB954', liked: '#ff4b4b', albums: '#4b9eff', playlists: '#b34bff', artists: '#ffcc4b',
     btn_bg: 'rgba(20, 18, 38, 0.65)', btn_icon: '#f0f0ff', blobs: '#7b5fdb',
+    now_mode: 'colored', now_gradient_enabled: 'false', now_color: '#2a2034', now_color_2: '#5b3d7a', now_gradient_angle: '135', now_gradient_position: '50', now_gradient_blend: '36', now_brightness: '72', now_frost: '52',
+    now_width: '860', now_height: '80', now_radius: '40',
+    sidebar_song_bg: 'true', sidebar_bg_strength: '60',
     glow_opacity: '0.8', blobs_opacity: '0.25',
     glass_reflection: 'true', glass_blur: '24'
   };
 
   function getSetting(key) { 
     const saved = localStorage.getItem('ag-setting-' + key);
-    if (saved) return saved;
+    if (saved !== null) return saved;
     return DEFAULTS[key];
+  }
+
+  function getNumericSetting(key, fallback, min = -Infinity, max = Infinity) {
+    const value = Number(getSetting(key));
+    return Math.max(min, Math.min(max, Number.isFinite(value) ? value : fallback));
+  }
+
+  function isNowGradientEnabled() {
+    if (getSetting('now_mode') === 'transparent' || getSetting('now_mode') === 'frosted') return false;
+    const saved = localStorage.getItem('ag-setting-now_gradient_enabled');
+    if (saved !== null) return saved === 'true';
+    return getSetting('now_mode') === 'gradient';
+  }
+
+  function stripCloneIds(root) {
+    root.querySelectorAll?.('[id]').forEach(el => el.removeAttribute('id'));
+  }
+
+  function updateNowPlayingPreviewClone() {
+    if (!document.body?.classList.contains('ag-now-preview')) return;
+    const source = document.querySelector('.Root__now-playing-bar');
+    if (!source) return;
+    let preview = document.getElementById('ag-now-playing-preview');
+    if (!preview) {
+      preview = document.createElement('div');
+      preview.id = 'ag-now-playing-preview';
+      preview.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(preview);
+    }
+    const clone = source.cloneNode(true);
+    stripCloneIds(clone);
+    clone.classList.add('ag-now-preview-clone');
+    preview.replaceChildren(clone);
+  }
+
+  function setNowPlayingPreview(enabled) {
+    document.body?.classList.toggle('ag-now-preview', !!enabled);
+    if (enabled) {
+      updateNowPlayingPreviewClone();
+      setTimeout(updateNowPlayingPreviewClone, 80);
+    } else {
+      document.getElementById('ag-now-playing-preview')?.remove();
+    }
   }
 
   function openSettingsPanel() {
     if (document.getElementById('ag-settings-panel')) return;
     const d = document.createElement('div'); d.id = 'ag-settings-panel';
-    const isPrivacy = localStorage.getItem('ag-privacy') === 'true';
+    document.body?.classList.add('ag-settings-open');
+    localStorage.removeItem('ag-privacy');
+    document.getElementById('ag-privacy-logic')?.remove();
+    const tip = text => `<button class="ag-setting-help" type="button" aria-label="${text}" title="${text}">?</button>`;
     
     d.innerHTML = `
       <div class="ag-settings-wrapper">
         <div class="ag-settings-content">
           <div class="ag-settings-header">
             <h3>Theme Settings</h3>
-            <button onclick="this.closest('#ag-settings-panel').remove()">${svg(ICONS.close, {size:16})}</button>
+            <button id="ag-settings-close" type="button">${svg(ICONS.close, {size:16})}</button>
           </div>
           
           <div class="ag-settings-tabs">
@@ -1452,15 +2908,16 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
             <button class="ag-tab-btn" data-tab="ui">UI & Accent</button>
           </div>
 
-          <div class="ag-settings-body">
-            <div class="ag-tab-content active" id="tab-general">
-              <div class="ag-setting-item"><label>Privacy Mode</label><input type="checkbox" id="ag-check-privacy" ${isPrivacy ? 'checked' : ''}/></div>
-              <div class="ag-setting-item"><label>Hero Glow Color</label><input type="color" id="ag-col-glow" value="${getSetting('glow')}"/></div>
-              <div class="ag-setting-item"><label>Hero Glow Intensity</label><input type="range" id="ag-range-glow_opacity" min="0" max="1" step="0.05" value="${getSetting('glow_opacity')}"/></div>
-              <div class="ag-setting-item"><label>Background Blobs Color</label><input type="color" id="ag-col-blobs" value="${getSetting('blobs')}"/></div>
-              <div class="ag-setting-item"><label>Blobs Intensity</label><input type="range" id="ag-range-blobs_opacity" min="0" max="1" step="0.05" value="${getSetting('blobs_opacity')}"/></div>
-              <div class="ag-setting-item"><label>FrostedGlass/Glass</label><input type="checkbox" id="ag-check-glass_reflection" ${getSetting('glass_reflection') === 'true' ? 'checked' : ''}/></div>
-              <div class="ag-setting-item"><label>Frosted Glass Blur</label><input type="range" id="ag-range-glass_blur" min="0" max="80" step="2" value="${getSetting('glass_blur')}"/></div>
+            <div class="ag-settings-body">
+              <div class="ag-tab-content active" id="tab-general">
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Hero Glow Color</label>${tip('Main ambient glow color used across the home view and glass tint.')}</span><input type="color" id="ag-col-glow" value="${getSetting('glow')}"/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Hero Glow Intensity</label>${tip('Controls how visible the large background glow is.')}</span><input type="range" id="ag-range-glow_opacity" min="0" max="1" step="0.05" value="${getSetting('glow_opacity')}"/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Background Blobs Color</label>${tip('Color used by the soft background blobs.')}</span><input type="color" id="ag-col-blobs" value="${getSetting('blobs')}"/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Blobs Intensity</label>${tip('Controls the strength of the decorative background blobs.')}</span><input type="range" id="ag-range-blobs_opacity" min="0" max="1" step="0.05" value="${getSetting('blobs_opacity')}"/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Song Sidebar BG</label>${tip('Uses the current cover as a blurred frosted background in the right sidebar.')}</span><input type="checkbox" id="ag-check-sidebar_song_bg" ${getSetting('sidebar_song_bg') === 'true' ? 'checked' : ''}/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Sidebar BG Strength</label>${tip('Adjusts how strongly the cover colors show through the sidebar glass.')}</span><input type="range" id="ag-range-sidebar_bg_strength" min="0" max="100" step="5" value="${getSetting('sidebar_bg_strength')}"/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>FrostedGlass/Glass</label>${tip('Adds a stronger reflective border and inset shine to glass surfaces.')}</span><input type="checkbox" id="ag-check-glass_reflection" ${getSetting('glass_reflection') === 'true' ? 'checked' : ''}/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Frosted Glass Blur</label>${tip('Controls blur amount for AmbientGlass glass panels.')}</span><input type="range" id="ag-range-glass_blur" min="0" max="80" step="2" value="${getSetting('glass_blur')}"/></div>
             </div>
 
             <div class="ag-tab-content" id="tab-cluster">
@@ -1483,7 +2940,22 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
             <div class="ag-tab-content" id="tab-ui">
                <div class="ag-setting-item"><label>Accent Color (Like/UI)</label><input type="color" id="ag-col-accent" value="${getSetting('accent')}"/></div>
-               <p style="font-size: 11px; opacity: 0.6; margin-top: 10px;">This skins native Spotify elements like the Like button and progress bar.</p>
+              <div class="ag-gradient-builder" data-gradient-enabled="${isNowGradientEnabled()}" data-now-mode="${getSetting('now_mode')}">
+                 <div class="ag-setting-item"><label>Now Playing Color</label><input type="color" id="ag-col-now_color" value="${getSetting('now_color')}"/></div>
+                 <div class="ag-setting-item"><label>Bar Style</label><select id="ag-select-now_mode"><option value="transparent" ${getSetting('now_mode') === 'transparent' ? 'selected' : ''}>Normal glass</option><option value="frosted" ${getSetting('now_mode') === 'frosted' ? 'selected' : ''}>Frosted glass</option><option value="colored" ${getSetting('now_mode') !== 'transparent' && getSetting('now_mode') !== 'frosted' ? 'selected' : ''}>Colored glass</option></select></div>
+                 <div class="ag-setting-item"><label>Gradient</label><input type="checkbox" id="ag-check-now_gradient_enabled" ${isNowGradientEnabled() ? 'checked' : ''}/></div>
+                 <div class="ag-setting-item ag-frosted-only"><label>Frosted Strength</label><div class="ag-angle-control"><input type="range" id="ag-range-now_frost" min="0" max="100" step="2" value="${getSetting('now_frost')}"/><span id="ag-now-frost-value">${getSetting('now_frost')}%</span></div></div>
+                 <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Width</label>${tip('Changes the floating song player width in pixels.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_width" min="520" max="1120" step="20" value="${getSetting('now_width')}"/><span id="ag-now-width-value">${getSetting('now_width')}px</span></div></div>
+                 <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Height</label>${tip('Changes the floating song player height in pixels.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_height" min="62" max="110" step="2" value="${getSetting('now_height')}"/><span id="ag-now-height-value">${getSetting('now_height')}px</span></div></div>
+                 <div class="ag-setting-item"><span class="ag-setting-label"><label>Player Radius</label>${tip('Rounds the song player. Higher values make it pill shaped.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-now_radius" min="8" max="56" step="2" value="${getSetting('now_radius')}"/><span id="ag-now-radius-value">${getSetting('now_radius')}px</span></div></div>
+                 <div class="ag-setting-item ag-gradient-only"><label>Second Color</label><input type="color" id="ag-col-now_color_2" value="${getSetting('now_color_2')}"/></div>
+                 <div class="ag-setting-item ag-gradient-only"><label>Gradient Angle</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_angle" min="0" max="360" step="5" value="${getSetting('now_gradient_angle')}"/><span id="ag-now-angle-value">${getSetting('now_gradient_angle')} deg</span></div></div>
+                 <div class="ag-setting-item ag-gradient-only"><label>Gradient Position</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_position" min="0" max="100" step="1" value="${getSetting('now_gradient_position')}"/><span id="ag-now-position-value">${getSetting('now_gradient_position')}%</span></div></div>
+                 <div class="ag-setting-item ag-gradient-only"><label>Blend Width</label><div class="ag-angle-control"><input type="range" id="ag-range-now_gradient_blend" min="0" max="100" step="2" value="${getSetting('now_gradient_blend')}"/><span id="ag-now-blend-value">${getSetting('now_gradient_blend')}%</span></div></div>
+                 <div class="ag-setting-item"><label>Glass Brightness</label><div class="ag-angle-control"><input type="range" id="ag-range-now_brightness" min="20" max="100" step="2" value="${getSetting('now_brightness')}"/><span id="ag-now-brightness-value">${getSetting('now_brightness')}%</span></div></div>
+                <div class="ag-gradient-preview" style="--ag-preview-angle:${getSetting('now_gradient_angle')}deg;--ag-preview-position:${getSetting('now_gradient_position')}%;--ag-preview-blend:${getNumericSetting('now_gradient_blend', 36, 0, 100)}%;--ag-preview-a:${getSetting('now_color')};--ag-preview-b:${getSetting('now_color_2')};--ag-preview-brightness:${getSetting('now_brightness')}%;"></div>
+               </div>
+               <p style="font-size: 11px; opacity: 0.6; margin-top: 10px;">These options use AmbientGlass variables only and do not change Spotify spice text colors.</p>
             </div>
           </div>
 
@@ -1501,6 +2973,12 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       </div>
     `;
     document.body.appendChild(d);
+    const closeSettings = () => {
+      d.remove();
+      document.body?.classList.remove('ag-settings-open');
+      setNowPlayingPreview(false);
+    };
+    d.querySelector('#ag-settings-close')?.addEventListener('click', closeSettings);
 
     // Tab Logic
     const tabs = d.querySelectorAll('.ag-tab-btn');
@@ -1511,11 +2989,14 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         contents.forEach(x => x.classList.remove('active'));
         t.classList.add('active');
         d.querySelector('#tab-' + t.dataset.tab).classList.add('active');
+        setNowPlayingPreview(t.dataset.tab === 'ui');
       });
     });
 
     d.querySelector('#ag-change-layout')?.addEventListener('click', () => {
       d.remove();
+      document.body?.classList.remove('ag-settings-open');
+      setNowPlayingPreview(false);
       startLayoutEditor();
     });
     d.querySelector('#ag-reset-layout')?.addEventListener('click', () => {
@@ -1525,33 +3006,51 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       updateVisibility();
       Spicetify.showNotification("AmbientGlass: Layout reset");
     });
-    // Live Change Logic
+    // Live update logic.
     const inputs = d.querySelectorAll('input, select');
     inputs.forEach(input => {
       const eventType = input.type === 'range' || input.type === 'color' ? 'input' : 'change';
       input.addEventListener(eventType, () => {
-        const k = input.id.replace('ag-col-', '').replace('ag-range-', '').replace('ag-check-', '');
-        if (input.id === 'ag-check-privacy') {
-            const wasTrue = localStorage.getItem('ag-privacy') === 'true';
-            localStorage.setItem('ag-privacy', input.checked);
-            if (input.checked) {
-                applyPrivacy();
-            } else if (wasTrue) {
-                Spicetify.showNotification("Privacy Off: Reloading to restore text... ↺");
-                setTimeout(() => location.reload(), 1200);
-            }
-        } else {
+        const k = input.id.replace('ag-col-', '').replace('ag-range-', '').replace('ag-check-', '').replace('ag-select-', '');
             const val = input.type === 'checkbox' ? input.checked.toString() : input.value;
             localStorage.setItem('ag-setting-' + k, val);
+            if (k === 'now_mode' && (val === 'transparent' || val === 'frosted')) {
+              const gradientCheck = d.querySelector('#ag-check-now_gradient_enabled');
+              if (gradientCheck) gradientCheck.checked = false;
+              localStorage.setItem('ag-setting-now_gradient_enabled', 'false');
+            }
+            if (k === 'now_gradient_angle') d.querySelector('#ag-now-angle-value').textContent = val + ' deg';
+            if (k === 'now_gradient_position') d.querySelector('#ag-now-position-value').textContent = val + '%';
+            if (k === 'now_gradient_blend') d.querySelector('#ag-now-blend-value').textContent = val + '%';
+            if (k === 'now_brightness') d.querySelector('#ag-now-brightness-value').textContent = val + '%';
+            if (k === 'now_frost') d.querySelector('#ag-now-frost-value').textContent = val + '%';
+            if (k === 'now_width') d.querySelector('#ag-now-width-value').textContent = val + 'px';
+            if (k === 'now_height') d.querySelector('#ag-now-height-value').textContent = val + 'px';
+            if (k === 'now_radius') d.querySelector('#ag-now-radius-value').textContent = val + 'px';
+            const builder = d.querySelector('.ag-gradient-builder');
+            if (builder) {
+              builder.dataset.gradientEnabled = (d.querySelector('#ag-check-now_gradient_enabled')?.checked || false).toString();
+              builder.dataset.nowMode = d.querySelector('#ag-select-now_mode')?.value || getSetting('now_mode');
+            }
+            const preview = d.querySelector('.ag-gradient-preview');
+            if (preview) {
+              preview.style.setProperty('--ag-preview-angle', (d.querySelector('#ag-range-now_gradient_angle')?.value || getSetting('now_gradient_angle')) + 'deg');
+              preview.style.setProperty('--ag-preview-position', (d.querySelector('#ag-range-now_gradient_position')?.value || getSetting('now_gradient_position')) + '%');
+              preview.style.setProperty('--ag-preview-blend', (d.querySelector('#ag-range-now_gradient_blend')?.value || getSetting('now_gradient_blend')) + '%');
+              preview.style.setProperty('--ag-preview-a', d.querySelector('#ag-col-now_color')?.value || getSetting('now_color'));
+              preview.style.setProperty('--ag-preview-b', d.querySelector('#ag-col-now_color_2')?.value || getSetting('now_color_2'));
+              preview.style.setProperty('--ag-preview-brightness', (d.querySelector('#ag-range-now_brightness')?.value || getSetting('now_brightness')) + '%');
+            }
             applyCustomColors();
-        }
+            updateNowPlayingPreviewClone();
       });
     });
 
     d.querySelector('#ag-save-settings').addEventListener('click', () => {
-      localStorage.setItem('ag-privacy', d.querySelector('#ag-check-privacy').checked);
+      localStorage.removeItem('ag-privacy');
+      document.getElementById('ag-privacy-logic')?.remove();
       Object.keys(DEFAULTS).forEach(k => {
-        const el = d.querySelector('#ag-col-' + k) || d.querySelector('#ag-range-' + k) || d.querySelector('#ag-check-' + k);
+        const el = d.querySelector('#ag-col-' + k) || d.querySelector('#ag-range-' + k) || d.querySelector('#ag-check-' + k) || d.querySelector('#ag-select-' + k);
         if (el) {
           const val = el.type === 'checkbox' ? el.checked.toString() : el.value;
           localStorage.setItem('ag-setting-' + k, val);
@@ -1561,13 +3060,12 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       // Live Apply!
       try {
         applyCustomColors();
-        if (localStorage.getItem('ag-privacy') === 'true') {
-            applyPrivacy();
-        }
       } catch(e) {}
       
       d.remove();
-      Spicetify.showNotification("AmbientGlass: Applied! ✨");
+      document.body?.classList.remove('ag-settings-open');
+      setNowPlayingPreview(false);
+      Spicetify.showNotification("AmbientGlass: Applied");
     });
     d.querySelector('#ag-reset-settings').addEventListener('click', () => {
       localStorage.removeItem('ag-privacy');
@@ -1577,7 +3075,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       document.getElementById('ag-privacy-logic')?.remove();
       
       d.remove();
-      Spicetify.showNotification("AmbientGlass: Reset to Defaults! ↺");
+      document.body?.classList.remove('ag-settings-open');
+      setNowPlayingPreview(false);
+      Spicetify.showNotification("AmbientGlass: Reset to defaults");
     });
   }
 
@@ -1592,6 +3092,21 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const playlists = getSetting('playlists');
     const artists = getSetting('artists');
     const accent = getSetting('accent');
+    const selectedNowMode = getSetting('now_mode');
+    const nowSurfaceMode = selectedNowMode === 'transparent' ? 'transparent' : selectedNowMode === 'frosted' ? 'frosted' : 'colored';
+    const nowMode = isNowGradientEnabled() ? 'gradient' : nowSurfaceMode;
+    const nowColor = getSetting('now_color');
+    const nowColor2 = getSetting('now_color_2');
+    const nowGradientAngle = getSetting('now_gradient_angle');
+    const nowGradientPosition = getNumericSetting('now_gradient_position', 50, 0, 100);
+    const nowGradientBlend = getNumericSetting('now_gradient_blend', 36, 0, 100);
+    const nowBrightness = Math.max(20, Math.min(100, Number(getSetting('now_brightness')) || 72));
+    const nowFrost = Math.max(0, Math.min(100, Number(getSetting('now_frost')) || 52));
+    const nowWidth = Math.max(520, Math.min(1120, Number(getSetting('now_width')) || 860));
+    const nowHeight = Math.max(62, Math.min(110, Number(getSetting('now_height')) || 80));
+    const nowRadius = Math.max(8, Math.min(56, Number(getSetting('now_radius')) || 40));
+    const sidebarSongBg = getSetting('sidebar_song_bg') === 'true';
+    const sidebarBgStrength = Math.max(0, Math.min(100, Number(getSetting('sidebar_bg_strength')) || 60));
     const btn_bg = getSetting('btn_bg');
     const btn_icon = getSetting('btn_icon');
     const blobs = getSetting('blobs');
@@ -1604,6 +3119,58 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     root.style.setProperty('--ag-s2', s2);
     root.style.setProperty('--ag-s3', s2);
     root.style.setProperty('--ag-accent-main', accent);
+    root.style.setProperty('--ag-accent-1', accent);
+    root.style.setProperty('--ag-accent-2', s2);
+    root.style.setProperty('--ag-now-mode', nowMode);
+    root.style.setProperty('--ag-now-color', nowColor);
+    root.style.setProperty('--ag-now-color-2', nowColor2);
+    root.style.setProperty('--ag-now-gradient-angle', nowGradientAngle + 'deg');
+    root.style.setProperty('--ag-now-gradient-position', nowGradientPosition + '%');
+    root.style.setProperty('--ag-now-gradient-blend', nowGradientBlend + '%');
+    root.style.setProperty('--ag-now-brightness', nowBrightness + '%');
+    root.style.setProperty('--ag-now-frost', nowFrost + '%');
+    root.style.setProperty('--ag-now-width', nowWidth + 'px');
+    root.style.setProperty('--ag-now-height', nowHeight + 'px');
+    root.style.setProperty('--ag-now-radius', nowRadius + 'px');
+    root.style.setProperty('--ag-sidebar-cover-opacity', (sidebarBgStrength / 100).toFixed(2));
+    root.style.setProperty('--ag-sidebar-cover-blur', (28 + sidebarBgStrength * 0.42).toFixed(0) + 'px');
+    document.body?.classList.toggle('ag-sidebar-song-bg-disabled', !sidebarSongBg);
+    root.style.setProperty('--ag-now-frost-blur', nowMode === 'frosted' ? (18 + nowFrost * 0.62).toFixed(0) + 'px' : 'var(--ag-glass-blur, 24px)');
+    root.style.setProperty('--ag-now-frost-saturate', nowMode === 'frosted' ? (130 + nowFrost * 0.9).toFixed(0) + '%' : '180%');
+    root.style.setProperty('--ag-now-glass-filter-brightness', (0.86 + nowBrightness / 300).toFixed(2));
+    const nowBase = `rgba(8,7,14,${(0.88 - nowBrightness / 220).toFixed(2)})`;
+    const nowGlass = 'linear-gradient(0deg, rgba(14, 12, 26, 0.42), rgba(14, 12, 26, 0.42))';
+    const frostAlpha = (0.18 + nowFrost / 190).toFixed(2);
+    const frostWhite = (nowFrost * 0.32).toFixed(1);
+    const nowFrosted = `linear-gradient(135deg, color-mix(in srgb, rgba(255,255,255,${frostAlpha}) ${frostWhite}%, rgba(10,9,18,0.62)), rgba(12,10,20,${(0.34 + nowFrost / 260).toFixed(2)}))`;
+    const nowSolid = `linear-gradient(0deg, color-mix(in srgb, ${nowColor} ${nowBrightness}%, ${nowBase}), color-mix(in srgb, ${nowColor} ${nowBrightness}%, ${nowBase}))`;
+    const nowHalfBlend = nowGradientBlend / 2;
+    const nowLeftStop = Math.max(0, nowGradientPosition - nowHalfBlend);
+    const nowRightStop = Math.min(100, nowGradientPosition + nowHalfBlend);
+    const nowA = `color-mix(in srgb, ${nowColor} ${nowBrightness}%, ${nowBase})`;
+    const nowB = `color-mix(in srgb, ${nowColor2} ${nowBrightness}%, ${nowBase})`;
+    const nowGradient = nowGradientBlend <= 0
+      ? `linear-gradient(${nowGradientAngle}deg, ${nowA} 0%, ${nowA} ${nowGradientPosition}%, ${nowB} ${nowGradientPosition}%, ${nowB} 100%)`
+      : `linear-gradient(${nowGradientAngle}deg, ${nowA} 0%, ${nowA} ${nowLeftStop}%, ${nowB} ${nowRightStop}%, ${nowB} 100%)`;
+    const glowLeftStop = Math.max(0, nowGradientPosition - Math.max(nowHalfBlend, 30));
+    const glowRightStop = Math.min(100, nowGradientPosition + Math.max(nowHalfBlend, 30));
+    const nowGlowGlass = 'linear-gradient(90deg, var(--ag-surface-tint-soft, rgba(123,95,219,0.22)), color-mix(in srgb, var(--ag-s2, #4f8edb) 18%, transparent))';
+    const nowGlowSolid = `linear-gradient(0deg, color-mix(in srgb, ${nowColor} 50%, transparent), color-mix(in srgb, ${nowColor} 50%, transparent))`;
+    const nowGlowGradient = `linear-gradient(${nowGradientAngle}deg, color-mix(in srgb, ${nowColor} 52%, transparent) 0%, color-mix(in srgb, ${nowColor} 42%, ${nowColor2} 18%) ${glowLeftStop}%, color-mix(in srgb, ${nowColor} 30%, ${nowColor2} 30%) ${nowGradientPosition}%, color-mix(in srgb, ${nowColor2} 42%, ${nowColor} 18%) ${glowRightStop}%, color-mix(in srgb, ${nowColor2} 52%, transparent) 100%)`;
+    root.style.setProperty('--ag-now-glass-bg', nowMode === 'gradient' ? nowGradient : nowMode === 'colored' ? nowSolid : nowMode === 'frosted' ? nowFrosted : nowGlass);
+    root.style.setProperty('--ag-now-glow-bg', nowMode === 'gradient' ? nowGlowGradient : nowMode === 'colored' ? nowGlowSolid : nowMode === 'frosted' ? nowFrosted : nowGlowGlass);
+    root.style.setProperty('--ag-now-glow-a', `color-mix(in srgb, ${nowColor} 52%, transparent)`);
+    root.style.setProperty('--ag-now-glow-b', `color-mix(in srgb, ${nowMode === 'gradient' ? nowColor2 : nowColor} 52%, transparent)`);
+    root.style.setProperty('--ag-now-glass-border', nowMode === 'transparent'
+      ? 'rgba(255, 255, 255, 0.09)'
+      : nowMode === 'frosted'
+        ? `rgba(255, 255, 255, ${(0.12 + nowFrost / 380).toFixed(2)})`
+      : 'rgba(255, 255, 255, 0.13)');
+    root.style.setProperty('--ag-now-glass-glow', nowMode === 'gradient'
+      ? `color-mix(in srgb, ${nowColor2} 36%, transparent)`
+      : nowMode === 'colored'
+        ? `color-mix(in srgb, ${nowColor} 42%, transparent)`
+      : 'var(--ag-surface-tint-soft, rgba(123,95,219,0.18))');
     
     root.style.setProperty('--ag-col-home', home);
     root.style.setProperty('--ag-col-liked', liked);
@@ -1616,6 +3183,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     root.style.setProperty('--ag-glow-opacity', glowOpacity);
     root.style.setProperty('--ag-blobs-opacity', blobsOpacity);
     root.style.setProperty('--ag-col-blobs', blobs);
+    root.style.setProperty('--ag-surface-tint', `color-mix(in srgb, ${glow} 22%, transparent)`);
+    root.style.setProperty('--ag-surface-tint-soft', `color-mix(in srgb, ${glow} 13%, transparent)`);
+    root.style.setProperty('--ag-surface-tint-strong', `color-mix(in srgb, ${glow} 34%, transparent)`);
+    root.style.setProperty('--ag-search-tint-a', `color-mix(in srgb, ${s1} 26%, transparent)`);
+    root.style.setProperty('--ag-search-tint-b', `color-mix(in srgb, ${s2} 22%, transparent)`);
     
     const reflection = getSetting('glass_reflection') === 'true';
     const blur = getSetting('glass_blur');
@@ -1637,6 +3209,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       #ag-jam-floating-pill {
         position: fixed !important;
         z-index: 30 !important;
+      }
+      #ag-centered-search {
+        z-index: 9000 !important;
       }
       #ag-jam-floating-pill {
         width: auto !important;
@@ -1670,11 +3245,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         top: var(--ag-now-y, 94%) !important;
         bottom: auto !important;
         transform: translate(-50%, -50%) !important;
-        width: min(760px, 58vw) !important;
+        width: min(var(--ag-now-width, 860px), calc(100vw - 80px)) !important;
         min-width: 0 !important;
         height: auto !important;
-        min-height: 66px !important;
-        max-height: 86px !important;
+        min-height: var(--ag-now-height, 80px) !important;
+        max-height: var(--ag-now-height, 80px) !important;
         background: none !important;
         background-color: transparent !important;
         background-image: none !important;
@@ -1690,15 +3265,28 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         transform: none !important;
         width: 100% !important;
         min-width: 0 !important;
-        max-width: min(760px, 58vw) !important;
+        max-width: min(var(--ag-now-width, 860px), calc(100vw - 80px)) !important;
         margin: 0 auto !important;
         z-index: 80 !important;
       }
       body.ag-layout-editing .Root__now-playing-bar,
       body.ag-layout-editing .Root__now-playing-bar > *,
+      body.ag-now-preview .Root__now-playing-bar,
+      body.ag-now-preview .Root__now-playing-bar > *,
       body:has(#ag-settings-panel) .Root__now-playing-bar,
       body:has(#ag-settings-panel) .Root__now-playing-bar > * {
-        z-index: 99996 !important;
+        z-index: 2147483646 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      body.ag-now-preview .Root__top-container {
+        z-index: 2147483645 !important;
+        isolation: auto !important;
+      }
+      body.ag-now-preview .Root__now-playing-bar {
+        position: fixed !important;
+        bottom: 30px !important;
+        top: auto !important;
       }
       body.ag-layout-custom .Root__now-playing-bar::before,
       body.ag-layout-custom .Root__now-playing-bar::after {
@@ -1751,19 +3339,18 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       .ag-artists:hover svg { stroke: ${artists} !important; }
 
       #ag-settings-panel .ag-settings-tabs {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 6px !important;
+        display: grid !important;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        gap: 8px !important;
         overflow: visible !important;
       }
       #ag-settings-panel .ag-tab-btn {
-        flex: 1 1 calc(33.333% - 6px) !important;
-        min-width: 72px !important;
+        min-width: 0 !important;
         max-width: none !important;
         white-space: normal !important;
         text-align: center !important;
       }
-      #ag-settings-panel .ag-setting-item button,
+      #ag-settings-panel .ag-setting-item button:not(.ag-setting-help),
       #ag-settings-panel #ag-change-layout,
       #ag-settings-panel #ag-reset-layout {
         min-width: 92px !important;
@@ -1788,7 +3375,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       }
       .x-progressBar-fillColor { background-color: ${accent} !important; }
 
-      /* Glass Settings Injection — High Specificity Overrides */
+      /* Glass settings injection - high-specificity overrides */
       html body .ag-pill-search, 
       html body .ag-cluster-btn, 
       html body #ag-lib-panel, 
@@ -1859,7 +3446,26 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     `;
   }
 
-  function applyPrivacy() { return; }
+  function hideAboutArtistCards() {
+    const sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], aside[data-testid="right-sidebar"]');
+    if (!sidebar) return;
+    const candidates = Array.from(sidebar.querySelectorAll('section, article, div, [role="region"]'));
+    candidates.forEach(el => {
+      const ownText = (el.innerText || el.textContent || '').trim().toLowerCase();
+      if (!ownText.startsWith('about the artist') && !ownText.startsWith('uber den kunstler') && !ownText.startsWith('über den künstler')) return;
+      const card = el.closest('.main-nowPlayingView-section, [class*="nowPlayingView_section"], section, article') || el;
+      card.dataset.agHiddenAboutArtist = 'true';
+      card.style.setProperty('display', 'none', 'important');
+      card.style.setProperty('visibility', 'hidden', 'important');
+      card.style.setProperty('height', '0', 'important');
+      card.style.setProperty('min-height', '0', 'important');
+      card.style.setProperty('max-height', '0', 'important');
+      card.style.setProperty('margin', '0', 'important');
+      card.style.setProperty('padding', '0', 'important');
+      card.style.setProperty('overflow', 'hidden', 'important');
+      card.style.setProperty('pointer-events', 'none', 'important');
+    });
+  }
   function injectSettingsToMenu() {
     const menus = Array.from(document.querySelectorAll('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content]'));
     const menu = menus.find(m => {
@@ -2007,7 +3613,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
           const label = `${btn.textContent || ''} ${btn.getAttribute('aria-label') || ''} ${btn.title || ''}`.toLowerCase();
           return label.includes('start a jam');
         });
-        const looksLikeActiveJam = text.includes("'s jam") || text.includes("’s jam") || text.includes('jam\n') || text.includes('jam\r');
+        const looksLikeActiveJam = text.includes("'s jam") || text.includes('\u2019s jam') || text.includes('jam\n') || text.includes('jam\r');
         return rect.width > 0 && rect.height > 0 && text.includes('jam') && !hasStart && (hasEnd || looksLikeActiveJam);
       });
     if (sidebarJam) {
@@ -2175,7 +3781,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         const style = getComputedStyle(el);
         const existsInLayout = rect.width > 0 && style.display !== 'none' && style.visibility !== 'hidden';
         const isConnected = className.includes('connectBar-connected') || el.dataset.agNativeJam === 'true';
-        return existsInLayout && !text.includes('connect to a device') && (isConnected || text.includes('jam') || text.includes('•'));
+        return existsInLayout && !text.includes('connect to a device') && (isConnected || text.includes('jam') || text.includes('\u2022'));
       });
     const endButton = visibleEndJam;
     const jamPanel = endButton?.closest('.Root__right-sidebar, [data-testid="right-sidebar"], [class*="queue"], [data-testid="queue-page"], [role="dialog"]');
@@ -2186,7 +3792,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const nativeBarText = (nativeBar?.innerText || nativeBar?.textContent || '').toLowerCase();
     const isNativeJam = !!(nativeBar && !nativeBarText.includes('start a jam') && (
       nativeBarText.includes('jam') ||
-      nativeBarText.includes('•') ||
+      nativeBarText.includes('\u2022') ||
       nativeBar.dataset.agNativeJam === 'true' ||
       String(nativeBar.className || '').includes('connectBar-connected')
     ));
@@ -2255,6 +3861,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     if (mode === 'light') {
       agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
       if (!_layoutEditMode) agSafeRun('queueVisibilityUpdate', queueVisibilityUpdate);
+      if ((Spicetify.Platform.History.location.pathname || '').includes('marketplace')) {
+        agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
+        agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing);
+        agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
+      }
       const hasMenu = !!document.querySelector('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content], [data-testid="context-menu"]');
       if (hasMenu) {
         agSafeRun('injectSettingsToMenu', injectSettingsToMenu);
@@ -2270,6 +3881,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
     if (!_layoutEditMode) agSafeRun('queueVisibilityUpdate', queueVisibilityUpdate);
     agSafeRun('fixFriendsPanel', fixFriendsPanel);
+    agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);
+    agSafeRun('hideAboutArtistCards', hideAboutArtistCards);
+    agSafeRun('syncSidebarOuterCollapse', syncSidebarOuterCollapse);
+    agSafeRun('updateSidebarResizeHitbox', updateSidebarResizeHitbox);
+    agSafeRun('syncFriendsSidebarState', () => syncFriendsSidebarState());
     const hasMenu = !!document.querySelector('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content], [data-testid="context-menu"]');
     if (hasMenu) {
       agSafeRun('injectSettingsToMenu', injectSettingsToMenu);
@@ -2277,6 +3893,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     }
     agSafeRun('fixYouLiked', fixYouLiked);
     agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
+    agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing);
+    agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
+    agSafeRun('updateSearchPageRedesign', updateSearchPageRedesign);
     agSafeRun('restoreNativeSidebar', restoreNativeSidebar);
     const hasJamUi = !!document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], [data-testid="queue-page"], .main-connectBar-connectBar, [class*="connectBar"], #ag-jam-floating-pill');
     if (hasJamUi) agSafeRun('updateJamPillLegacy', updateJamPillLegacy);
@@ -2291,18 +3910,29 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function init() {
-    console.log("%c AmbientGlass ✦ EROX %c", "background:#7b5fdb;color:#fff;padding:5px;border-radius:5px;", "");
+    console.log("%c AmbientGlass - EROX %c", "background:#7b5fdb;color:#fff;padding:5px;border-radius:5px;", "");
     try { applyCustomColors(); } catch(e) {}
-    try { applyPrivacy(); } catch(e) {}
+    localStorage.removeItem('ag-privacy');
+    document.getElementById('ag-privacy-logic')?.remove();
     
-    triggerStartupAnimation(); createBlobs(); createHeroGlow();
-    createHomeCluster(); createSearchOverlay(); createLibraryPanel();
+    triggerStartupAnimation(); createBlobs(); createHeroGlow(); createGlowSmoother();
+    createHomeCluster(); createSearchOverlay(); createUpNextCard(); createLibraryPanel();
+    setupAmbientSearchHotkey();
+    updateSidebarCoverBackground();
     killTopbar(); killResidues();
+    agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
+    [50, 150, 400, 900, 1800].forEach(delay => setTimeout(() => {
+      markDockDirty();
+      agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
+    }, delay));
     setupSidebarObserver();
     window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
     window.addEventListener('resize', () => {
       markDockDirty();
+      updateSearchPageVisualCenter();
+      positionUpNextCard();
       queueVisibilityUpdate();
+      updateSidebarResizeHitbox();
       scheduleRuntimeFix('light', 40);
     });
     window.addEventListener('pointerdown', () => {
@@ -2311,6 +3941,10 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     }, true);
     try { Spicetify.Platform.History.listen(() => {
       markDockDirty();
+      agSafeRun('updateSearchPageRedesign', updateSearchPageRedesign);
+      agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
+      [120, 420, 900, 1600].forEach(delay => setTimeout(() => agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing), delay));
+      [140, 460, 940, 1650].forEach(delay => setTimeout(() => agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome), delay));
       scheduleRuntimeFix('full', 120);
     }); } catch {}
     fixFriendsPanel();
@@ -2326,16 +3960,21 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         if (mutation.type !== 'childList') continue;
         const touched = [...mutation.addedNodes, ...mutation.removedNodes].filter(node => node?.nodeType === 1);
         if (!touched.length) continue;
-        needsLight = true;
         for (const node of touched) {
           const html = node.outerHTML || '';
           const text = node.textContent || '';
           if (html.includes('contextMenu') || html.includes('role="menu"') || text.toLowerCase().includes('find a playlist')) needsMenu = true;
           if (html.includes('connectBar') || text.toLowerCase().includes('start a jam') || text.toLowerCase().includes(' jam')) needsJam = true;
-          if (html.includes('main-userWidget') || html.includes('marketplace-extension-button') || html.includes('stats-extension-button')) needsDock = true;
+          if (html.includes('main-userWidget') ||
+              html.includes('marketplace-extension-button') ||
+              html.includes('stats-extension-button') ||
+              html.includes('extension-button') ||
+              html.includes('aria-label') && html.includes('Marketplace') ||
+              html.includes('aria-label') && html.includes('Stat')) needsDock = true;
           if (html.includes('buddyFeed') || html.includes('entityHeader') || html.includes('marketplace')) needsFull = true;
         }
       }
+      needsLight = needsMenu || needsJam || needsDock;
       if (needsDock) markDockDirty();
       if (needsLight) scheduleRuntimeFix('light', 50);
       if (needsMenu) scheduleRuntimeFix('light', 10);
@@ -2344,11 +3983,16 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
-    setInterval(() => scheduleRuntimeFix('light', 0), 2000);
+    setInterval(() => scheduleRuntimeFix('light', 0), 15000);
+    setInterval(() => agSafeRun('updateUpNextCard', updateUpNextCard), 5000);
+    setInterval(() => agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground), 1500);
+    setInterval(() => agSafeRun('hideAboutArtistCards', hideAboutArtistCards), 2000);
+    setInterval(() => agSafeRun('syncSidebarOuterCollapse', syncSidebarOuterCollapse), 1000);
+    setInterval(() => agSafeRun('updateSidebarResizeHitbox', updateSidebarResizeHitbox), 2000);
     setInterval(() => {
       markDockDirty();
       scheduleRuntimeFix('full', 0);
-    }, 12000);
+    }, 90000);
   }
   
   window.AmbientGlass = { safeNavigate, closeLibraryPanel };
