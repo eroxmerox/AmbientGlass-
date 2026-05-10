@@ -8,7 +8,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
 (function AmbientGlass() {
   'use strict';
-  console.log("AmbientGlass V16. Created by EROX");
+  console.log("AmbientGlass V16.5. Created by EROX");
 
   if (!Spicetify?.Player || !Spicetify?.Platform) {
     setTimeout(AmbientGlass, 300);
@@ -535,7 +535,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function applySidebarWidth() {
-    const sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], aside[data-testid="right-sidebar"]');
+    const sidebar = getRightSidebarRoot();
     if (!sidebar) return;
     if (!window.__agSidebarResizeResetDone) {
       window.__agSidebarResizeResetDone = true;
@@ -546,10 +546,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       parent?.style.removeProperty('--right-sidebar-width');
       parent?.style.removeProperty('grid-template-columns');
     }
-    document.body?.classList.remove('ag-sidebar-custom-width', 'ag-sidebar-native-collapsed');
+    document.body?.classList.remove('ag-sidebar-custom-width');
     document.documentElement.style.removeProperty('--ag-sidebar-width');
     document.documentElement.style.removeProperty('--ag-sidebar-extra');
-    document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
     document.getElementById('ag-sidebar-resize-hitbox')?.remove();
     sidebar.querySelectorAll(`
       .main-nowPlayingView-nowPlayingView,
@@ -573,20 +572,345 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     });
   }
 
+  function getRightSidebarRoot() {
+    return document.querySelector('.Root__right-sidebar') ||
+           document.querySelector('aside[data-testid="right-sidebar"]') ||
+           document.querySelector('[data-testid="right-sidebar"]')?.closest?.('.Root__right-sidebar, aside[data-testid="right-sidebar"]') ||
+           document.querySelector('[data-testid="right-sidebar"]');
+  }
+
   function syncSidebarOuterCollapse() {
-    document.body?.classList.remove('ag-sidebar-native-collapsed');
-    document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
+    if (isFullscreen()) {
+      document.body?.classList.remove('ag-sidebar-native-collapsed', 'ag-sidebar-force-open');
+      document.getElementById('ag-sidebar-reveal-hitbox')?.remove();
+      document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
+      return;
+    }
+    const sidebar = getRightSidebarRoot();
+    const rect = sidebar?.getBoundingClientRect?.();
+    if (window.__agSidebarRevealUntil && Date.now() < window.__agSidebarRevealUntil) return;
+    if (document.body?.classList.contains('ag-sidebar-force-open')) {
+      if (sidebar) forceOpenRightSidebar(sidebar);
+      document.body?.classList.remove('ag-sidebar-native-collapsed', 'ag-sidebar-peek');
+      document.getElementById('ag-sidebar-reveal-hitbox')?.remove();
+      document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
+      return;
+    }
+    const alreadyHidden = document.body?.classList.contains('ag-sidebar-native-collapsed') &&
+                          !!document.getElementById('ag-sidebar-reveal-hitbox');
+    const visuallyCollapsed = !!rect && rect.width > 0 && (
+      rect.width <= 140 ||
+      (rect.left >= window.innerWidth - 150 && rect.right >= window.innerWidth - 4)
+    );
+    const collapsed = !!sidebar && (alreadyHidden || visuallyCollapsed);
+    document.body?.classList.toggle('ag-sidebar-native-collapsed', collapsed);
+    if (collapsed) {
+      document.documentElement.style.setProperty('--ag-sidebar-collapsed-width', `${Math.ceil(rect.width)}px`);
+      ensureSidebarRevealHitbox(sidebar);
+    } else {
+      document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
+      document.getElementById('ag-sidebar-reveal-hitbox')?.remove();
+    }
   }
 
   function updateSidebarResizeHitbox() {
-    const sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], aside[data-testid="right-sidebar"]');
+    const sidebar = getRightSidebarRoot();
     document.getElementById('ag-sidebar-resize-hitbox')?.remove();
     if (!sidebar) return;
     applySidebarWidth();
     normalizeNativeSidebarResizeGrip(sidebar);
+    setupForceOpenCollapseHandler(sidebar);
+    syncSidebarOuterCollapse();
   }
 
-  function normalizeNativeSidebarResizeGrip(sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], aside[data-testid="right-sidebar"]')) {
+  function getExpandedSidebarWidth() {
+    return `${Math.round(Math.min(380, Math.max(300, window.innerWidth * 0.23)))}px`;
+  }
+
+  function forceOpenRightSidebar(sidebar = getRightSidebarRoot()) {
+    if (!sidebar) return;
+    const savedWidth = document.documentElement.style.getPropertyValue('--ag-sidebar-expanded-width').trim();
+    const width = savedWidth || getExpandedSidebarWidth();
+    const rect = sidebar.getBoundingClientRect?.();
+    const top = Math.round(clamp(rect?.top || 56, 48, Math.max(48, window.innerHeight - 260)));
+    document.documentElement.style.setProperty('--ag-sidebar-expanded-width', width);
+    document.documentElement.style.setProperty('--ag-sidebar-open-top', `${top}px`);
+    document.body?.classList.add('ag-sidebar-force-open');
+    sidebar.style.removeProperty('display');
+    sidebar.style.removeProperty('visibility');
+    sidebar.style.removeProperty('opacity');
+    sidebar.style.setProperty('position', 'fixed', 'important');
+    sidebar.style.setProperty('top', `${top}px`, 'important');
+    sidebar.style.setProperty('right', '15px', 'important');
+    sidebar.style.setProperty('bottom', '0', 'important');
+    sidebar.style.setProperty('left', 'auto', 'important');
+    sidebar.style.setProperty('height', `calc(100vh - ${top}px)`, 'important');
+    sidebar.style.setProperty('margin', '0', 'important');
+    sidebar.style.setProperty('width', width, 'important');
+    sidebar.style.setProperty('min-width', width, 'important');
+    sidebar.style.setProperty('max-width', width, 'important');
+    sidebar.style.setProperty('flex-basis', width, 'important');
+    sidebar.style.setProperty('pointer-events', 'auto', 'important');
+    sidebar.style.setProperty('z-index', '2147483600', 'important');
+    const parent = sidebar.parentElement;
+    parent?.style.setProperty('--right-sidebar-width', width, 'important');
+    parent?.style.setProperty('--ag-sidebar-width', width, 'important');
+    normalizeNowPlayingPanelWidth(sidebar, width);
+    normalizeRightSidebarShell(sidebar);
+    ensureForceOpenSidebarResizeHitbox(sidebar);
+    ensureForceOpenSidebarCollapseHitbox(sidebar);
+    window.setTimeout(() => clickShowNowPlayingView(sidebar), 80);
+  }
+
+  function stabilizeForceOpenRightSidebar(sidebar = getRightSidebarRoot()) {
+    window.__agSidebarRevealUntil = Date.now() + 1800;
+    [0, 80, 180, 360, 720, 1200].forEach(delay => {
+      window.setTimeout(() => {
+        const activeSidebar = getRightSidebarRoot() || sidebar;
+        if (!activeSidebar || !document.body?.classList.contains('ag-sidebar-force-open')) return;
+        forceOpenRightSidebar(activeSidebar);
+      }, delay);
+    });
+    window.setTimeout(() => {
+      window.__agSidebarRevealUntil = 0;
+      syncSidebarOuterCollapse();
+    }, 1850);
+  }
+
+  function collapseRightSidebarOuter(sidebar = getRightSidebarRoot()) {
+    if (!sidebar) return;
+    const rect = sidebar.getBoundingClientRect?.();
+    const collapsedWidth = rect?.width && rect.width <= 140 ? Math.ceil(rect.width) : 72;
+    document.documentElement.style.setProperty('--ag-sidebar-collapsed-width', `${collapsedWidth}px`);
+    document.body?.classList.remove('ag-sidebar-force-open', 'ag-sidebar-peek');
+    delete sidebar.dataset.agManualReveal;
+    ['display', 'visibility', 'opacity', 'pointer-events', 'position', 'top', 'right', 'bottom', 'left', 'height', 'margin', 'width', 'min-width', 'max-width', 'flex-basis', 'z-index'].forEach(prop => {
+      sidebar.style.removeProperty(prop);
+    });
+    const parent = sidebar.parentElement;
+    parent?.style.removeProperty('--right-sidebar-width');
+    parent?.style.removeProperty('--ag-sidebar-width');
+    document.getElementById('ag-sidebar-resize-hitbox')?.remove();
+    document.getElementById('ag-sidebar-collapse-hitbox')?.remove();
+    document.documentElement.style.removeProperty('--ag-sidebar-open-top');
+    ensureSidebarRevealHitbox(sidebar);
+    document.body?.classList.add('ag-sidebar-native-collapsed');
+  }
+
+  function isForceOpenCollapseControl(button, sidebar) {
+    if (!button || !sidebar) return false;
+    const label = `${button.getAttribute('aria-label') || ''} ${button.title || ''}`.toLowerCase();
+    if (label.includes('fullscreen') ||
+        label.includes('full screen') ||
+        label.includes('vollbild') ||
+        label.includes('cinema') ||
+        label.includes('theater') ||
+        label.includes('pip')) return false;
+    if ((label.includes('hide') || label.includes('collapse') || label.includes('close') || label.includes('ausblenden') || label.includes('einklappen') || label.includes('schliessen') || label.includes('schließen')) &&
+        (label.includes('now playing') || label.includes('wiedergabe') || label.includes('right sidebar'))) return true;
+    const rect = button.getBoundingClientRect?.();
+    const sideRect = sidebar.getBoundingClientRect?.();
+    if (!rect?.width || !rect?.height || !sideRect?.width || !sideRect?.height) return false;
+    const glyph = (button.textContent || '').trim();
+    const nearLeftEdge = rect.left <= sideRect.left + 72;
+    const inMiddle = rect.top >= sideRect.top + 96 && rect.bottom <= sideRect.bottom - 96;
+    return nearLeftEdge && inMiddle && ['<', '>', '\u2039', '\u203a'].includes(glyph);
+  }
+
+  function setupForceOpenCollapseHandler(sidebar) {
+    if (!sidebar || sidebar.dataset.agForceOpenCollapseHooked === 'true') return;
+    sidebar.dataset.agForceOpenCollapseHooked = 'true';
+    sidebar.addEventListener('click', event => {
+      if (!document.body?.classList.contains('ag-sidebar-force-open')) return;
+      const button = event.target?.closest?.('button, [role="button"]');
+      if (!button || !sidebar.contains(button)) return;
+      if (!isForceOpenCollapseControl(button, sidebar)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      collapseRightSidebarOuter(sidebar);
+    }, true);
+  }
+
+  function ensureForceOpenSidebarCollapseHitbox(sidebar) {
+    let hitbox = document.getElementById('ag-sidebar-collapse-hitbox');
+    if (!hitbox) {
+      hitbox = document.createElement('button');
+      hitbox.id = 'ag-sidebar-collapse-hitbox';
+      hitbox.type = 'button';
+      hitbox.setAttribute('aria-label', 'Hide right sidebar');
+      hitbox.addEventListener('click', event => {
+        if (!document.body?.classList.contains('ag-sidebar-force-open')) return;
+        const activeSidebar = getRightSidebarRoot();
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        collapseRightSidebarOuter(activeSidebar || sidebar);
+      }, true);
+      document.body.appendChild(hitbox);
+    }
+    positionForceOpenSidebarCollapseHitbox(sidebar);
+  }
+
+  function positionForceOpenSidebarCollapseHitbox(sidebar) {
+    const hitbox = document.getElementById('ag-sidebar-collapse-hitbox');
+    const rect = sidebar?.getBoundingClientRect?.();
+    if (!hitbox || !rect?.width || !rect?.height) return;
+    hitbox.style.setProperty('left', `${Math.round(rect.left)}px`, 'important');
+    hitbox.style.setProperty('top', `${Math.round(rect.top + Math.max(110, rect.height * 0.38))}px`, 'important');
+    hitbox.style.setProperty('height', `${Math.round(Math.min(240, Math.max(150, rect.height * 0.24)))}px`, 'important');
+  }
+
+  function normalizeRightSidebarShell(sidebar) {
+    const shell = sidebar?.firstElementChild;
+    if (!shell || shell.matches?.('button, [role="button"]')) return;
+    shell.style.setProperty('display', 'flex', 'important');
+    shell.style.setProperty('flex-direction', 'column', 'important');
+    shell.style.setProperty('flex', '1 1 auto', 'important');
+    shell.style.setProperty('height', '100%', 'important');
+    shell.style.setProperty('min-height', '0', 'important');
+    shell.style.setProperty('width', '100%', 'important');
+    shell.style.setProperty('min-width', '0', 'important');
+    shell.style.setProperty('max-width', 'none', 'important');
+    shell.style.setProperty('opacity', '1', 'important');
+    shell.style.setProperty('visibility', 'visible', 'important');
+    shell.style.setProperty('pointer-events', 'auto', 'important');
+  }
+
+  function normalizeNowPlayingPanelWidth(sidebar, width) {
+    if (!sidebar) return;
+    const panel = sidebar.querySelector('aside[aria-label="Now playing view"], aside[aria-label="Aktuelle Wiedergabe"], aside[aria-label*="playing" i], aside[aria-label*="wiedergabe" i]');
+    if (!panel) return;
+    panel.style.setProperty('width', width, 'important');
+    panel.style.setProperty('min-width', '0', 'important');
+    panel.style.setProperty('max-width', 'none', 'important');
+    panel.style.setProperty('pointer-events', 'auto', 'important');
+    const content = panel.querySelector('.main-nowPlayingView-headerContainer')?.parentElement ||
+                    panel.querySelector('.main-nowPlayingView-mainWrapper')?.parentElement;
+    if (!content) return;
+    content.style.setProperty('width', '100%', 'important');
+    content.style.setProperty('min-width', '0', 'important');
+    content.style.setProperty('max-width', 'none', 'important');
+  }
+
+  function clickShowNowPlayingView(sidebar = getRightSidebarRoot()) {
+    if (!sidebar || isFullscreen()) return false;
+    if (window.__agShowNowPlayingLastClick && Date.now() - window.__agShowNowPlayingLastClick < 450) return false;
+    const button = Array.from(sidebar.querySelectorAll('button[aria-label]'))
+      .find(candidate => candidate.getAttribute('aria-label') === 'Show Now Playing view');
+    const rect = button?.getBoundingClientRect?.();
+    if (!button || !rect?.width || !rect?.height) return false;
+    const sideRect = sidebar.getBoundingClientRect?.();
+    if (sideRect && (rect.left < sideRect.left - 12 || rect.right > sideRect.right + 12)) return false;
+    window.__agShowNowPlayingLastClick = Date.now();
+    button.dataset.agShowNowPlayingClicked = 'true';
+    button.click?.();
+    window.setTimeout(() => {
+      delete button.dataset.agShowNowPlayingClicked;
+    }, 800);
+    return true;
+  }
+
+  function setForceOpenSidebarWidth(px, sidebar = getRightSidebarRoot()) {
+    const width = `${Math.round(clamp(px, 280, Math.min(520, window.innerWidth - 120)))}px`;
+    document.documentElement.style.setProperty('--ag-sidebar-expanded-width', width);
+    if (!sidebar) return;
+    sidebar.style.setProperty('width', width, 'important');
+    sidebar.style.setProperty('min-width', width, 'important');
+    sidebar.style.setProperty('max-width', width, 'important');
+    sidebar.style.setProperty('flex-basis', width, 'important');
+    const parent = sidebar.parentElement;
+    parent?.style.setProperty('--right-sidebar-width', width, 'important');
+    parent?.style.setProperty('--ag-sidebar-width', width, 'important');
+    normalizeNowPlayingPanelWidth(sidebar, width);
+    normalizeRightSidebarShell(sidebar);
+    positionForceOpenSidebarCollapseHitbox(sidebar);
+  }
+
+  function ensureForceOpenSidebarResizeHitbox(sidebar) {
+    let hitbox = document.getElementById('ag-sidebar-resize-hitbox');
+    if (!hitbox) {
+      hitbox = document.createElement('div');
+      hitbox.id = 'ag-sidebar-resize-hitbox';
+      hitbox.addEventListener('pointerdown', event => {
+        const activeSidebar = getRightSidebarRoot();
+        if (!document.body?.classList.contains('ag-sidebar-force-open') || !activeSidebar) return;
+        event.preventDefault();
+        event.stopPropagation();
+        document.body?.classList.add('ag-sidebar-resizing');
+        hitbox.setPointerCapture?.(event.pointerId);
+        const move = moveEvent => {
+          setForceOpenSidebarWidth(window.innerWidth - moveEvent.clientX, activeSidebar);
+          const rect = activeSidebar.getBoundingClientRect?.();
+          if (rect) hitbox.style.setProperty('left', `${Math.round(rect.left - 8)}px`, 'important');
+        };
+        const stop = () => {
+          document.body?.classList.remove('ag-sidebar-resizing');
+          window.removeEventListener('pointermove', move, true);
+          window.removeEventListener('pointerup', stop, true);
+          window.removeEventListener('pointercancel', stop, true);
+        };
+        window.addEventListener('pointermove', move, true);
+        window.addEventListener('pointerup', stop, true);
+        window.addEventListener('pointercancel', stop, true);
+      }, true);
+      document.body.appendChild(hitbox);
+    }
+    const rect = sidebar?.getBoundingClientRect?.();
+    if (!rect) return;
+    hitbox.style.setProperty('left', `${Math.round(rect.left - 8)}px`, 'important');
+    hitbox.style.setProperty('top', `${Math.round(rect.top)}px`, 'important');
+    hitbox.style.setProperty('height', `${Math.round(rect.height)}px`, 'important');
+  }
+
+  function revealRightSidebar() {
+    const sidebar = getRightSidebarRoot();
+    window.__agSidebarRevealUntil = Date.now() + 1800;
+    document.body?.classList.remove('ag-sidebar-peek', 'ag-sidebar-native-collapsed');
+    document.getElementById('ag-sidebar-reveal-hitbox')?.remove();
+    document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
+    if (sidebar) {
+      delete sidebar.dataset.agManualReveal;
+      sidebar.style.removeProperty('display');
+      sidebar.style.removeProperty('visibility');
+      sidebar.style.removeProperty('opacity');
+      forceOpenRightSidebar(sidebar);
+      stabilizeForceOpenRightSidebar(sidebar);
+    }
+  }
+
+  function ensureSidebarRevealHitbox(sidebar) {
+    let hitbox = document.getElementById('ag-sidebar-reveal-hitbox');
+    if (!hitbox) {
+      hitbox = document.createElement('button');
+      hitbox.id = 'ag-sidebar-reveal-hitbox';
+      hitbox.type = 'button';
+      hitbox.setAttribute('aria-label', 'Show right sidebar');
+      hitbox.addEventListener('pointerenter', () => {
+        document.body?.classList.add('ag-sidebar-peek');
+        sidebar.dataset.agManualReveal = 'true';
+      });
+      hitbox.addEventListener('pointerleave', () => {
+        if (window.__agSidebarRevealUntil && Date.now() < window.__agSidebarRevealUntil) return;
+        document.body?.classList.remove('ag-sidebar-peek');
+        delete sidebar.dataset.agManualReveal;
+      });
+      hitbox.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        revealRightSidebar();
+      }, true);
+      document.body.appendChild(hitbox);
+    }
+    const rect = sidebar?.getBoundingClientRect?.();
+    const top = Math.max(64, Math.round(rect?.top || 64));
+    const bottomGap = Math.max(92, Math.round(window.innerHeight - (rect?.bottom || window.innerHeight - 92)));
+    hitbox.style.setProperty('--ag-sidebar-hitbox-top', `${top}px`);
+    hitbox.style.setProperty('--ag-sidebar-hitbox-bottom', `${bottomGap}px`);
+  }
+
+  function normalizeNativeSidebarResizeGrip(sidebar = getRightSidebarRoot()) {
     if (!sidebar) return;
     const sideRect = sidebar.getBoundingClientRect();
     if (!sideRect.width || !sideRect.height) return;
@@ -755,8 +1079,10 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       }
     }).catch(() => {});
     load();
+    let retryCount = 0;
     const retry = window.setInterval(() => {
-      if (labels.length > 1 && labels[0] !== 'Search...') {
+      retryCount += 1;
+      if ((labels.length > 1 && labels[0] !== 'Search...') || retryCount > 2) {
         window.clearInterval(retry);
         return;
       }
@@ -776,6 +1102,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   function rememberPersonalSearchPlaceholders(labels) {
     try {
       localStorage.setItem('ag-personal-search-placeholders', JSON.stringify(labels.slice(0, 18)));
+      localStorage.setItem('ag-personal-search-placeholders-ts', String(Date.now()));
     } catch {}
   }
 
@@ -789,6 +1116,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   async function loadPersonalSearchPlaceholders() {
+    const cached = getCachedPersonalSearchPlaceholders();
+    const cachedAt = Number(localStorage.getItem('ag-personal-search-placeholders-ts') || 0);
+    const freshEnough = cached.length && cachedAt && Date.now() - cachedAt < 6 * 60 * 60 * 1000;
+    if (freshEnough || window.__agPersonalSearchLoadInFlight) return cached;
+    window.__agPersonalSearchLoadInFlight = true;
     const seen = new Set();
     const groups = { artists: [], tracks: [], albums: [], playlists: [] };
     const push = (group, name) => {
@@ -844,7 +1176,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     }
     const labels = mixed.length ? shuffleArray(mixed).slice(0, 12) : getCachedPersonalSearchPlaceholders();
     if (labels.length) rememberPersonalSearchPlaceholders(labels);
-    return labels;
+    window.__agPersonalSearchLoadInFlight = false;
+    return labels.length ? labels : cached;
   }
 
   function collectVisibleSearchPlaceholders() {
@@ -974,7 +1307,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         <div class="ag-splash-title">AmbientGlass</div>
       </div>
       <div class="ag-splash-footer">made by EROX</div>
-      <div style="position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.15); font-size: 10px; letter-spacing: 1px; font-family: monospace;">V16</div>
+      <div style="position: absolute; bottom: 20px; left: 20px; color: #fff; font-size: 10px; letter-spacing: 1px; font-family: monospace;">V16.5</div>
     `;
     document.body.appendChild(s);
     
@@ -1744,7 +2077,13 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       const path = Spicetify.Platform.History.location.pathname || '';
       const fulls = ['/lyrics', '/queue', '/preferences'];
       if (fulls.some(r => path.startsWith(r))) return true;
-      return !!(document.fullscreenElement || document.querySelector('.npv-main-container'));
+      return !!(
+        document.fullscreenElement ||
+        document.querySelector('.npv-main-container') ||
+        document.querySelector('button[aria-label*="Exit full screen" i]') ||
+        document.querySelector('button[aria-label*="Exit fullscreen" i]') ||
+        document.querySelector('button[aria-label*="Vollbild beenden" i]')
+      );
     } catch { return false; }
   }
 
@@ -1783,19 +2122,22 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const path = Spicetify.Platform.History.location.pathname || '';
     const isSearchPage = path.startsWith('/search/');
     const isNarrow = window.innerWidth < 750;
-    const isFull = isFullscreen() || 
-                   path.includes('marketplace') || 
-                   path.includes('stats') || 
-                   path.includes('statistics') ||
-                   !!document.querySelector('.marketplace-header') ||
-                   !!document.querySelector('.stats-header');
+    const isExtensionPage = path.includes('marketplace') ||
+                            path.includes('stats') ||
+                            path.includes('statistics') ||
+                            !!document.querySelector('.marketplace-header') ||
+                            !!document.querySelector('.stats-header');
+    const isFull = isFullscreen();
+    document.body?.classList.toggle('ag-fullscreen-active', isFullscreen());
+    document.body?.classList.toggle('ag-extension-page', isExtensionPage);
     const isModal = isModalOpen();
     const shouldHide = !_layoutEditMode && (isFull || isNarrow || isModal);
+    const suppressSearch = shouldHide || isExtensionPage;
     const y = getMainScrollY();
     const searchFadeDistance = isSearchPage ? 220 : 150;
-    const o = shouldHide ? 0 : Math.max(0, 1 - y / searchFadeDistance);
-    const hidden = shouldHide || y > searchFadeDistance || o < 0.05;
-    const pinHomeTop = shouldHide || isSearchPage || y > 12;
+    const o = suppressSearch ? 0 : Math.max(0, 1 - y / searchFadeDistance);
+    const hidden = suppressSearch || y > searchFadeDistance || o < 0.05;
+    const pinHomeTop = shouldHide || isSearchPage || isExtensionPage || y > 12;
     const visibilitySignature = [
       shouldHide ? 1 : 0,
       pinHomeTop ? 1 : 0,
@@ -1810,9 +2152,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       setStyleIfChanged(search, 'opacity', '0');
       setStyleIfChanged(search, 'visibility', 'hidden');
       setStyleIfChanged(search, 'pointer-events', 'none');
-      setStyleIfChanged(cluster, 'opacity', '1');
-      setStyleIfChanged(cluster, 'visibility', 'visible');
-      setStyleIfChanged(cluster, 'pointer-events', 'auto');
+      setStyleIfChanged(cluster, 'opacity', '0');
+      setStyleIfChanged(cluster, 'visibility', 'hidden');
+      setStyleIfChanged(cluster, 'pointer-events', 'none');
       setStyleIfChanged(cluster, 'left', '50%', 'important');
       setStyleIfChanged(cluster, 'top', '60px', 'important');
       setStyleIfChanged(cluster, 'right', 'auto', 'important');
@@ -2274,7 +2616,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function setupSidebarObserver() {
-    const sidebar = document.querySelector('.Root__right-sidebar');
+    const sidebar = getRightSidebarRoot();
     if (!sidebar) { setTimeout(setupSidebarObserver, 500); return; }
     if (false && !sidebar.dataset.agCollapseHooked) {
       sidebar.dataset.agCollapseHooked = 'true';
@@ -2303,12 +2645,16 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     }
     const observer = new MutationObserver(() => {
       syncFriendsSidebarState(sidebar);
+      setupForceOpenCollapseHandler(sidebar);
+      syncSidebarOuterCollapse();
     });
     observer.observe(sidebar, { childList: true, subtree: true });
     syncFriendsSidebarState(sidebar);
+    setupForceOpenCollapseHandler(sidebar);
+    syncSidebarOuterCollapse();
   }
 
-  function syncFriendsSidebarState(sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"]')) {
+  function syncFriendsSidebarState(sidebar = getRightSidebarRoot()) {
     if (!sidebar) return;
     const isBuddy = !!sidebar.querySelector('[class*="buddyFeed"], [data-testid*="buddy" i], [aria-label*="Friend"], [aria-label*="Freund"], [class*="friend" i]');
     sidebar.classList.toggle('ag-friends-open', isBuddy);
@@ -2366,7 +2712,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   function restoreNativeSidebar() {
     const sidebar = document.querySelector('.Root__right-sidebar');
     document.body?.classList.remove('ag-sidebar-on-left', 'ag-sidebar-on-right');
+    document.getElementById('ag-sidebar-reveal-hitbox')?.remove();
     document.documentElement.style.removeProperty('--ag-sidebar-space');
+    document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
     if (!sidebar) return;
     sidebar.classList.remove('ag-sidebar-left', 'ag-sidebar-right', 'ag-sidebar-collapsed');
     delete sidebar.dataset.agManualCollapsed;
@@ -2832,7 +3180,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     now_width: '860', now_height: '80', now_radius: '40', cover_spin: 'false',
     sidebar_song_bg: 'true', sidebar_bg_strength: '60',
     glow_opacity: '0.8', glow_size: '155', blobs_opacity: '0.25',
-    glass_reflection: 'true', glass_blur: '24'
+    glass_reflection: 'true', glass_blur: '24',
+    performance_mode: 'false'
   };
 
   function getSetting(key) { 
@@ -2851,6 +3200,10 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const saved = localStorage.getItem('ag-setting-now_gradient_enabled');
     if (saved !== null) return saved === 'true';
     return getSetting('now_mode') === 'gradient';
+  }
+
+  function isPerformanceMode() {
+    return getSetting('performance_mode') === 'true';
   }
 
   function stripCloneIds(root) {
@@ -2882,6 +3235,135 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     } else {
       document.getElementById('ag-now-playing-preview')?.remove();
     }
+  }
+
+  const ONBOARDING_SEEN_KEY = 'ag-onboarding-seen';
+  const ONBOARDING_SLIDES = [
+    {
+      kicker: 'Start',
+      title: 'Welcome to AmbientGlass',
+      text: 'A lighter glass layer for Spotify with floating controls, quick access, and a performance mode for weaker PCs.'
+    },
+    {
+      kicker: 'Home Cluster',
+      title: 'Fast navigation',
+      text: 'Hover the home button to open Liked Songs, Albums, Playlists, and Artists without digging through Spotify menus.'
+    },
+    {
+      kicker: 'Search',
+      title: 'Ambient Search',
+      text: 'Use the centered search bar or Ctrl+K to jump into search. The floating layout can be moved from Settings.'
+    },
+    {
+      kicker: 'Performance',
+      title: 'Keep it smooth',
+      text: 'Performance Mode reduces heavy blur, shadows, hover effects, and background polling when a system needs more headroom.'
+    },
+    {
+      kicker: 'Profile Dock',
+      title: 'Settings and addons',
+      text: 'Hover your profile picture to open the AmbientGlass dock with Settings, Marketplace, Listening Stats, and more installed addons.'
+    }
+  ];
+
+  function hasSeenOnboarding() {
+    return localStorage.getItem(ONBOARDING_SEEN_KEY) === 'true';
+  }
+
+  function markOnboardingSeen() {
+    localStorage.setItem(ONBOARDING_SEEN_KEY, 'true');
+  }
+
+  function showOnboarding(force = false) {
+    if (!force && hasSeenOnboarding()) return;
+    document.getElementById('ag-onboarding')?.remove();
+
+    let index = 0;
+    const overlay = document.createElement('div');
+    overlay.id = 'ag-onboarding';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'ag-onboarding-title');
+
+    overlay.innerHTML = `
+      <div class="ag-onboarding-backdrop"></div>
+      <div class="ag-onboarding-card">
+        <div class="ag-onboarding-topline">
+          <span class="ag-onboarding-kicker"></span>
+          <button class="ag-onboarding-close" type="button" aria-label="Close introduction">${svg(ICONS.close, {size:16})}</button>
+        </div>
+        <div class="ag-onboarding-mark" aria-hidden="true">AG</div>
+        <h2 id="ag-onboarding-title"></h2>
+        <p class="ag-onboarding-copy"></p>
+        <div class="ag-onboarding-dots" aria-label="Introduction progress"></div>
+        <div class="ag-onboarding-actions">
+          <button class="ag-onboarding-skip" type="button">Skip</button>
+          <button class="ag-onboarding-next" type="button">Next</button>
+        </div>
+      </div>
+    `;
+
+    const close = (seen = true) => {
+      if (seen) markOnboardingSeen();
+      overlay.remove();
+      document.body?.classList.remove('ag-onboarding-open');
+      document.removeEventListener('keydown', onKeydown, true);
+    };
+
+    const render = () => {
+      const slide = ONBOARDING_SLIDES[index];
+      overlay.querySelector('.ag-onboarding-kicker').textContent = slide.kicker;
+      overlay.querySelector('#ag-onboarding-title').textContent = slide.title;
+      overlay.querySelector('.ag-onboarding-copy').textContent = slide.text;
+      overlay.querySelector('.ag-onboarding-next').textContent = index === ONBOARDING_SLIDES.length - 1 ? 'Got it' : 'Next';
+      overlay.querySelector('.ag-onboarding-dots').innerHTML = ONBOARDING_SLIDES.map((_, i) => (
+        `<button type="button" class="${i === index ? 'active' : ''}" aria-label="Go to introduction step ${i + 1}"></button>`
+      )).join('');
+      overlay.querySelectorAll('.ag-onboarding-dots button').forEach((button, i) => {
+        button.addEventListener('click', () => {
+          index = i;
+          render();
+        });
+      });
+    };
+
+    const onKeydown = event => {
+      if (event.key === 'Escape') close(true);
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (index < ONBOARDING_SLIDES.length - 1) {
+          index += 1;
+          render();
+        } else {
+          close(true);
+        }
+      }
+      if (event.key === 'ArrowLeft' && index > 0) {
+        event.preventDefault();
+        index -= 1;
+        render();
+      }
+    };
+
+    overlay.querySelector('.ag-onboarding-close')?.addEventListener('click', () => close(true));
+    overlay.querySelector('.ag-onboarding-skip')?.addEventListener('click', () => close(true));
+    overlay.querySelector('.ag-onboarding-next')?.addEventListener('click', () => {
+      if (index < ONBOARDING_SLIDES.length - 1) {
+        index += 1;
+        render();
+      } else {
+        close(true);
+      }
+    });
+    overlay.addEventListener('pointerdown', event => {
+      if (event.target === overlay.querySelector('.ag-onboarding-backdrop')) close(true);
+    });
+
+    document.body?.appendChild(overlay);
+    document.body?.classList.add('ag-onboarding-open');
+    document.addEventListener('keydown', onKeydown, true);
+    render();
+    setTimeout(() => overlay.querySelector('.ag-onboarding-next')?.focus(), 30);
   }
 
   function openSettingsPanel() {
@@ -2919,6 +3401,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Sidebar BG Strength</label>${tip('Adjusts how strongly the cover colors show through the sidebar glass.')}</span><input type="range" id="ag-range-sidebar_bg_strength" min="0" max="100" step="5" value="${getSetting('sidebar_bg_strength')}"/></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>FrostedGlass/Glass</label>${tip('Adds a stronger reflective border and inset shine to glass surfaces.')}</span><input type="checkbox" id="ag-check-glass_reflection" ${getSetting('glass_reflection') === 'true' ? 'checked' : ''}/></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Frosted Glass Blur</label>${tip('Controls blur amount for AmbientGlass glass panels.')}</span><input type="range" id="ag-range-glass_blur" min="0" max="80" step="2" value="${getSetting('glass_blur')}"/></div>
+              <div class="ag-setting-item ag-performance-setting"><span class="ag-setting-label"><label>Performance Mode</label><span class="ag-beta-sticker" aria-label="Beta">BETA</span>${tip('Reduces heavy blur, shadows, hover effects, and background polling for smoother use on weaker PCs.')}</span><input type="checkbox" id="ag-check-performance_mode" ${isPerformanceMode() ? 'checked' : ''}/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Introduction</label>${tip('Shows the AmbientGlass first-run introduction again.')}</span><button id="ag-show-onboarding" type="button">Show</button></div>
             </div>
 
             <div class="ag-tab-content" id="tab-cluster">
@@ -2935,7 +3419,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
             </div>
 
             <div class="ag-tab-content" id="tab-layout">
-              <div class="ag-setting-item"><label>Move AmbientGlass Layout</label><button id="ag-change-layout" type="button">Change</button></div>
+              <div class="ag-setting-item ag-layout-change-setting"><span class="ag-setting-label"><label>Move AmbientGlass Layout</label><span class="ag-note-sticker" aria-label="Note">BETA</span></span><button id="ag-change-layout" type="button">Change</button></div>
               <div class="ag-setting-item"><label>Reset Saved Layout</label><button id="ag-reset-layout" type="button">Reset</button></div>
             </div>
 
@@ -2984,6 +3468,13 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       </div>
     `;
     document.body.appendChild(d);
+    d.querySelectorAll('.ag-setting-item').forEach((item, index) => {
+      const label = item.querySelector('label');
+      const control = item.querySelector('input, select, textarea, button:not(.ag-setting-help)');
+      if (!label || !control) return;
+      if (!control.id) control.id = `ag-setting-control-${index}`;
+      label.setAttribute('for', control.id);
+    });
     const closeSettings = () => {
       d.remove();
       document.body?.classList.remove('ag-settings-open');
@@ -3017,6 +3508,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       updateVisibility();
       Spicetify.showNotification("AmbientGlass: Layout reset");
     });
+    d.querySelector('#ag-show-onboarding')?.addEventListener('click', () => showOnboarding(true));
     // Live update logic.
     const inputs = d.querySelectorAll('input, select');
     inputs.forEach(input => {
@@ -3149,6 +3641,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     root.style.setProperty('--ag-now-height', nowHeight + 'px');
     root.style.setProperty('--ag-now-radius', nowRadius + 'px');
     document.body?.classList.toggle('ag-cover-spin', coverSpin);
+    document.body?.classList.toggle('ag-performance-mode', isPerformanceMode());
     root.style.setProperty('--ag-sidebar-cover-opacity', (sidebarBgStrength / 100).toFixed(2));
     root.style.setProperty('--ag-sidebar-cover-blur', (28 + sidebarBgStrength * 0.42).toFixed(0) + 'px');
     document.body?.classList.toggle('ag-sidebar-song-bg-disabled', !sidebarSongBg);
@@ -3894,14 +4387,15 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       if (hasJamUi) agSafeRun('updateJamPillLegacy', updateJamPillLegacy);
       return;
     }
+    const performanceMode = isPerformanceMode();
     agSafeRun('killTopbar', killTopbar);
     agSafeRun('killResidues', killResidues);
     agSafeRun('healArtistImage', healArtistImage);
     agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
     if (!_layoutEditMode) agSafeRun('queueVisibilityUpdate', queueVisibilityUpdate);
     agSafeRun('fixFriendsPanel', fixFriendsPanel);
-    agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);
-    agSafeRun('hideAboutArtistCards', hideAboutArtistCards);
+    if (!performanceMode) agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);
+    if (!performanceMode) agSafeRun('hideAboutArtistCards', hideAboutArtistCards);
     agSafeRun('syncSidebarOuterCollapse', syncSidebarOuterCollapse);
     agSafeRun('updateSidebarResizeHitbox', updateSidebarResizeHitbox);
     agSafeRun('syncFriendsSidebarState', () => syncFriendsSidebarState());
@@ -3936,6 +4430,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     
     triggerStartupAnimation(); createBlobs(); createHeroGlow(); createGlowSmoother();
     createHomeCluster(); createSearchOverlay(); createUpNextCard(); createLibraryPanel();
+    setTimeout(() => agSafeRun('showOnboarding', () => showOnboarding(false)), 1000);
     setupAmbientSearchHotkey();
     updateSidebarCoverBackground();
     killTopbar(); killResidues();
@@ -3998,20 +4493,31 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       if (needsLight) scheduleRuntimeFix('light', 50);
       if (needsMenu) scheduleRuntimeFix('light', 10);
       if (needsJam) scheduleRuntimeFix('light', 10);
-      if (needsFull) scheduleRuntimeFix('full', 180);
+      if (needsFull) scheduleRuntimeFix('full', isPerformanceMode() ? 420 : 180);
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
-    setInterval(() => scheduleRuntimeFix('light', 0), 15000);
-    setInterval(() => agSafeRun('updateUpNextCard', updateUpNextCard), 5000);
-    setInterval(() => agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground), 1500);
-    setInterval(() => agSafeRun('hideAboutArtistCards', hideAboutArtistCards), 2000);
-    setInterval(() => agSafeRun('syncSidebarOuterCollapse', syncSidebarOuterCollapse), 1000);
-    setInterval(() => agSafeRun('updateSidebarResizeHitbox', updateSidebarResizeHitbox), 2000);
-    setInterval(() => {
+    const repeat = (fn, delayForMode) => {
+      const tick = () => {
+        fn();
+        window.setTimeout(tick, delayForMode());
+      };
+      window.setTimeout(tick, delayForMode());
+    };
+    repeat(() => scheduleRuntimeFix('light', 0), () => isPerformanceMode() ? 30000 : 15000);
+    repeat(() => agSafeRun('updateUpNextCard', updateUpNextCard), () => isPerformanceMode() ? 10000 : 5000);
+    repeat(() => {
+      if (!isPerformanceMode()) agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);
+    }, () => isPerformanceMode() ? 12000 : 1500);
+    repeat(() => {
+      if (!isPerformanceMode()) agSafeRun('hideAboutArtistCards', hideAboutArtistCards);
+    }, () => isPerformanceMode() ? 6000 : 2000);
+    repeat(() => agSafeRun('syncSidebarOuterCollapse', syncSidebarOuterCollapse), () => isPerformanceMode() ? 2500 : 1000);
+    repeat(() => agSafeRun('updateSidebarResizeHitbox', updateSidebarResizeHitbox), () => isPerformanceMode() ? 4000 : 2000);
+    repeat(() => {
       markDockDirty();
       scheduleRuntimeFix('full', 0);
-    }, 90000);
+    }, () => isPerformanceMode() ? 150000 : 90000);
   }
   
   window.AmbientGlass = { safeNavigate, closeLibraryPanel };
