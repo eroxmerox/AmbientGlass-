@@ -38,6 +38,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     search: { x: 50, y: 46 },
     nowPlaying: { x: 50, y: 94, w: 58 }
   };
+  const SIDEBAR_MIN_WIDTH = 280;
+  const SIDEBAR_MAX_WIDTH = 420;
+  const SIDEBAR_BOTTOM_GAP = 0;
   let _layoutEditMode = false;
   let _layoutDraft = null;
   let _layoutFrame = 0;
@@ -48,6 +51,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   let _dockButtonsDirty = true;
   let _lastAppliedLayoutSignature = '';
   let _lastVisibilitySignature = '';
+  let _lastSidebarHitboxSignature = '';
+  let _lastAboutArtistScan = 0;
   const HITBOX_STYLE_TEXT = `
       #ag-side-dock {
         position: fixed !important;
@@ -294,6 +299,13 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function createHeroGlow() { if (!document.getElementById('ag-hero-glow')) { const g = document.createElement('div'); g.id = 'ag-hero-glow'; document.body.prepend(g); } }
+  function createPageCoverBackground() {
+    if (document.getElementById('ag-page-cover-bg')) return;
+    const bg = document.createElement('div');
+    bg.id = 'ag-page-cover-bg';
+    bg.setAttribute('aria-hidden', 'true');
+    document.body.prepend(bg);
+  }
   function createBlobs() {
     if (document.getElementById('ag-blobs')) return;
     const w = document.createElement('div'); w.id = 'ag-blobs';
@@ -518,13 +530,29 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   function getCurrentTrackImage() {
     const data = Spicetify.Player?.data || Spicetify.Platform?.PlayerAPI?._state || {};
     const item = data.item || data.track || data.contextTrack || data.current || data;
-    return normalizeNextTrack(item)?.image || deepFindImageUrl(data) || '';
+    const apiImage = normalizeNextTrack(item)?.image || deepFindImageUrl(data) || '';
+    if (apiImage) return apiImage;
+    const domImage = Array.from(document.querySelectorAll(`
+      .main-nowPlayingView-coverArt img,
+      [data-testid="CoverSlotCollapsed--image"] img,
+      [data-testid="cover-art-image"],
+      img.cover-art-image,
+      img.main-image-image,
+      .cover-art img,
+      [data-testid="entity-image"] img
+    `)).map(img => img.currentSrc || img.src || '')
+      .find(src => src && !src.startsWith('data:') && !src.includes('localfile'));
+    return domImage || '';
   }
 
   let _lastSidebarCover = '';
   function updateSidebarCoverBackground() {
+    createPageCoverBackground();
     const image = getCurrentTrackImage();
-    if (image === _lastSidebarCover) return;
+    if (image === _lastSidebarCover) {
+      document.body?.classList.toggle('ag-sidebar-cover-active', !!image);
+      return;
+    }
     _lastSidebarCover = image;
     document.body?.classList.toggle('ag-sidebar-cover-active', !!image);
     if (image) {
@@ -549,7 +577,6 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     document.body?.classList.remove('ag-sidebar-custom-width');
     document.documentElement.style.removeProperty('--ag-sidebar-width');
     document.documentElement.style.removeProperty('--ag-sidebar-extra');
-    document.getElementById('ag-sidebar-resize-hitbox')?.remove();
     sidebar.querySelectorAll(`
       .main-nowPlayingView-nowPlayingView,
       [data-testid="now-playing-view"],
@@ -596,6 +623,14 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
       return;
     }
+    const visiblyOpen = !!rect && rect.width > 140 && rect.right > window.innerWidth - 80;
+    if (visiblyOpen) {
+      forceOpenRightSidebar(sidebar);
+      document.body?.classList.remove('ag-sidebar-native-collapsed', 'ag-sidebar-peek');
+      document.getElementById('ag-sidebar-reveal-hitbox')?.remove();
+      document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
+      return;
+    }
     const alreadyHidden = document.body?.classList.contains('ag-sidebar-native-collapsed') &&
                           !!document.getElementById('ag-sidebar-reveal-hitbox');
     const visuallyCollapsed = !!rect && rect.width > 0 && (
@@ -615,26 +650,49 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
   function updateSidebarResizeHitbox() {
     const sidebar = getRightSidebarRoot();
-    document.getElementById('ag-sidebar-resize-hitbox')?.remove();
     if (!sidebar) return;
+    const rect = sidebar.getBoundingClientRect?.();
+    const signature = [
+      document.body?.classList.contains('ag-sidebar-force-open') ? 'open' : 'native',
+      Math.round(rect?.left || 0),
+      Math.round(rect?.top || 0),
+      Math.round(rect?.width || 0),
+      Math.round(rect?.height || 0)
+    ].join('|');
+    if (signature === _lastSidebarHitboxSignature && document.getElementById('ag-sidebar-resize-hitbox')) {
+      return;
+    }
+    _lastSidebarHitboxSignature = signature;
     applySidebarWidth();
     normalizeNativeSidebarResizeGrip(sidebar);
     setupForceOpenCollapseHandler(sidebar);
     syncSidebarOuterCollapse();
+    if (document.body?.classList.contains('ag-sidebar-force-open') && !isFullscreen()) {
+      ensureForceOpenSidebarResizeHitbox(sidebar);
+    }
   }
 
   function getExpandedSidebarWidth() {
-    return `${Math.round(Math.min(380, Math.max(300, window.innerWidth * 0.23)))}px`;
+    return `${Math.round(clamp(window.innerWidth * 0.23, 300, Math.min(380, SIDEBAR_MAX_WIDTH)))}px`;
+  }
+
+  function getStableSidebarWidth() {
+    const savedWidth = document.documentElement.style.getPropertyValue('--ag-sidebar-expanded-width').trim();
+    const savedWidthNumber = parseInt(savedWidth, 10);
+    const fallbackWidth = parseInt(getExpandedSidebarWidth(), 10);
+    return `${Math.round(clamp(Number.isFinite(savedWidthNumber) ? savedWidthNumber : fallbackWidth, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH))}px`;
   }
 
   function forceOpenRightSidebar(sidebar = getRightSidebarRoot()) {
     if (!sidebar) return;
-    const savedWidth = document.documentElement.style.getPropertyValue('--ag-sidebar-expanded-width').trim();
-    const width = savedWidth || getExpandedSidebarWidth();
-    const rect = sidebar.getBoundingClientRect?.();
-    const top = Math.round(clamp(rect?.top || 56, 48, Math.max(48, window.innerHeight - 260)));
+    const width = getStableSidebarWidth();
+    const contentWidth = `${Math.max(220, parseInt(width, 10) - 32)}px`;
+    const top = 48;
     document.documentElement.style.setProperty('--ag-sidebar-expanded-width', width);
+    document.documentElement.style.setProperty('--ag-sidebar-content-width', contentWidth);
+    document.documentElement.style.setProperty('--ag-sidebar-space', `calc(${width} + 34px)`);
     document.documentElement.style.setProperty('--ag-sidebar-open-top', `${top}px`);
+    document.documentElement.style.setProperty('--ag-sidebar-bottom-gap', `${SIDEBAR_BOTTOM_GAP}px`);
     document.body?.classList.add('ag-sidebar-force-open');
     sidebar.style.removeProperty('display');
     sidebar.style.removeProperty('visibility');
@@ -642,9 +700,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     sidebar.style.setProperty('position', 'fixed', 'important');
     sidebar.style.setProperty('top', `${top}px`, 'important');
     sidebar.style.setProperty('right', '15px', 'important');
-    sidebar.style.setProperty('bottom', '0', 'important');
+    sidebar.style.setProperty('bottom', `${SIDEBAR_BOTTOM_GAP}px`, 'important');
     sidebar.style.setProperty('left', 'auto', 'important');
-    sidebar.style.setProperty('height', `calc(100vh - ${top}px)`, 'important');
+    sidebar.style.setProperty('height', `calc(100vh - ${top}px - ${SIDEBAR_BOTTOM_GAP}px)`, 'important');
     sidebar.style.setProperty('margin', '0', 'important');
     sidebar.style.setProperty('width', width, 'important');
     sidebar.style.setProperty('min-width', width, 'important');
@@ -655,10 +713,17 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const parent = sidebar.parentElement;
     parent?.style.setProperty('--right-sidebar-width', width, 'important');
     parent?.style.setProperty('--ag-sidebar-width', width, 'important');
+    parent?.style.setProperty('--ag-sidebar-space', `calc(${width} + 34px)`, 'important');
     normalizeNowPlayingPanelWidth(sidebar, width);
     normalizeRightSidebarShell(sidebar);
+    updateSidebarCoverBackground();
     ensureForceOpenSidebarResizeHitbox(sidebar);
     ensureForceOpenSidebarCollapseHitbox(sidebar);
+    window.requestAnimationFrame?.(() => {
+      normalizeNowPlayingPanelWidth(sidebar, width);
+      normalizeRightSidebarShell(sidebar);
+      positionForceOpenSidebarCollapseHitbox(sidebar);
+    });
     window.setTimeout(() => clickShowNowPlayingView(sidebar), 80);
   }
 
@@ -690,9 +755,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const parent = sidebar.parentElement;
     parent?.style.removeProperty('--right-sidebar-width');
     parent?.style.removeProperty('--ag-sidebar-width');
-    document.getElementById('ag-sidebar-resize-hitbox')?.remove();
     document.getElementById('ag-sidebar-collapse-hitbox')?.remove();
     document.documentElement.style.removeProperty('--ag-sidebar-open-top');
+    document.documentElement.style.removeProperty('--ag-sidebar-space');
+    document.documentElement.style.removeProperty('--ag-sidebar-content-width');
+    document.documentElement.style.removeProperty('--ag-sidebar-bottom-gap');
     ensureSidebarRevealHitbox(sidebar);
     document.body?.classList.add('ag-sidebar-native-collapsed');
   }
@@ -779,18 +846,88 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
   function normalizeNowPlayingPanelWidth(sidebar, width) {
     if (!sidebar) return;
-    const panel = sidebar.querySelector('aside[aria-label="Now playing view"], aside[aria-label="Aktuelle Wiedergabe"], aside[aria-label*="playing" i], aside[aria-label*="wiedergabe" i]');
-    if (!panel) return;
+    const panel = sidebar.querySelector('aside[aria-label="Now playing view"], aside[aria-label="Aktuelle Wiedergabe"], aside[aria-label*="playing" i], aside[aria-label*="wiedergabe" i], [data-testid="now-playing-view"]') || sidebar;
     panel.style.setProperty('width', width, 'important');
     panel.style.setProperty('min-width', '0', 'important');
     panel.style.setProperty('max-width', 'none', 'important');
+    panel.style.setProperty('box-sizing', 'border-box', 'important');
     panel.style.setProperty('pointer-events', 'auto', 'important');
-    const content = panel.querySelector('.main-nowPlayingView-headerContainer')?.parentElement ||
-                    panel.querySelector('.main-nowPlayingView-mainWrapper')?.parentElement;
-    if (!content) return;
-    content.style.setProperty('width', '100%', 'important');
-    content.style.setProperty('min-width', '0', 'important');
-    content.style.setProperty('max-width', 'none', 'important');
+    panel.querySelectorAll(`
+      [data-testid="now-playing-view"],
+      [data-testid="now-playing-view-background"],
+      .main-nowPlayingView-nowPlayingView,
+      .main-nowPlayingView-scrollNode,
+      .main-nowPlayingView-content,
+      .main-nowPlayingView-mainWrapper,
+      .main-nowPlayingView-headerContainer,
+      .main-nowPlayingView-section,
+      [class*="nowPlayingView_nowPlayingView"],
+      [class*="nowPlayingView_scrollNode"],
+      [class*="nowPlayingView_content"],
+      [class*="nowPlayingView_mainWrapper"],
+      [class*="nowPlayingView_headerContainer"],
+      [class*="nowPlayingView_section"],
+      [data-overlayscrollbars],
+      [data-overlayscrollbars-host],
+      [data-overlayscrollbars-viewport],
+      .os-host,
+      .os-viewport,
+      .os-content
+    `).forEach(el => {
+      el.style.setProperty('width', '100%', 'important');
+      el.style.setProperty('min-width', '0', 'important');
+      el.style.setProperty('max-width', 'none', 'important');
+      el.style.setProperty('box-sizing', 'border-box', 'important');
+      el.style.setProperty('transform', 'none', 'important');
+    });
+    panel.querySelectorAll(`
+      .main-nowPlayingView-scrollNode,
+      [class*="nowPlayingView_scrollNode"],
+      [data-overlayscrollbars-viewport],
+      .os-viewport
+    `).forEach(el => {
+      el.style.setProperty('overflow-y', 'auto', 'important');
+      el.style.setProperty('overflow-x', 'hidden', 'important');
+      el.style.setProperty('height', '100%', 'important');
+      el.style.setProperty('max-height', '100%', 'important');
+      el.style.setProperty('padding-bottom', '0', 'important');
+      el.style.setProperty('box-sizing', 'border-box', 'important');
+    });
+    panel.querySelectorAll(`
+      .os-content,
+      .main-nowPlayingView-content,
+      [class*="nowPlayingView_content"]
+    `).forEach(el => {
+      el.style.setProperty('height', 'auto', 'important');
+      el.style.setProperty('min-height', '0', 'important');
+      el.style.setProperty('max-height', 'none', 'important');
+      el.style.setProperty('padding-bottom', '0', 'important');
+      el.style.setProperty('box-sizing', 'border-box', 'important');
+    });
+    panel.querySelectorAll(`
+      .main-nowPlayingView-headerContainer,
+      .main-nowPlayingView-mainWrapper,
+      .main-nowPlayingView-section,
+      [class*="nowPlayingView_headerContainer"],
+      [class*="nowPlayingView_mainWrapper"],
+      [class*="nowPlayingView_section"],
+      [class*="searchCategory-contentArea"],
+      [class*="searchCategory_contentArea"]
+    `).forEach(el => {
+      el.style.setProperty('width', '100%', 'important');
+      el.style.setProperty('min-width', '0', 'important');
+      el.style.setProperty('max-width', '100%', 'important');
+      el.style.setProperty('box-sizing', 'border-box', 'important');
+      el.style.setProperty('transform', 'none', 'important');
+    });
+    panel.querySelectorAll(`
+      .main-nowPlayingView-coverArt,
+      [class*="coverArt"]
+    `).forEach(el => {
+      el.style.setProperty('width', '100%', 'important');
+      el.style.setProperty('max-width', '100%', 'important');
+      el.style.setProperty('box-sizing', 'border-box', 'important');
+    });
   }
 
   function clickShowNowPlayingView(sidebar = getRightSidebarRoot()) {
@@ -812,8 +949,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function setForceOpenSidebarWidth(px, sidebar = getRightSidebarRoot()) {
-    const width = `${Math.round(clamp(px, 280, Math.min(520, window.innerWidth - 120)))}px`;
+    const width = `${Math.round(clamp(px, SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth - 120)))}px`;
+    const contentWidth = `${Math.max(220, parseInt(width, 10) - 32)}px`;
     document.documentElement.style.setProperty('--ag-sidebar-expanded-width', width);
+    document.documentElement.style.setProperty('--ag-sidebar-content-width', contentWidth);
+    document.documentElement.style.setProperty('--ag-sidebar-space', `calc(${width} + 34px)`);
     if (!sidebar) return;
     sidebar.style.setProperty('width', width, 'important');
     sidebar.style.setProperty('min-width', width, 'important');
@@ -822,9 +962,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const parent = sidebar.parentElement;
     parent?.style.setProperty('--right-sidebar-width', width, 'important');
     parent?.style.setProperty('--ag-sidebar-width', width, 'important');
+    parent?.style.setProperty('--ag-sidebar-space', `calc(${width} + 34px)`, 'important');
     normalizeNowPlayingPanelWidth(sidebar, width);
     normalizeRightSidebarShell(sidebar);
     positionForceOpenSidebarCollapseHitbox(sidebar);
+    window.requestAnimationFrame?.(() => normalizeNowPlayingPanelWidth(sidebar, width));
   }
 
   function ensureForceOpenSidebarResizeHitbox(sidebar) {
@@ -834,9 +976,12 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       hitbox.id = 'ag-sidebar-resize-hitbox';
       hitbox.addEventListener('pointerdown', event => {
         const activeSidebar = getRightSidebarRoot();
-        if (!document.body?.classList.contains('ag-sidebar-force-open') || !activeSidebar) return;
+        if (!activeSidebar) return;
         event.preventDefault();
         event.stopPropagation();
+        if (!document.body?.classList.contains('ag-sidebar-force-open')) {
+          forceOpenRightSidebar(activeSidebar);
+        }
         document.body?.classList.add('ag-sidebar-resizing');
         hitbox.setPointerCapture?.(event.pointerId);
         const move = moveEvent => {
@@ -2640,7 +2785,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         event.preventDefault();
         event.stopImmediatePropagation();
         const isCollapsed = sidebar.classList.contains('ag-sidebar-collapsed') || sidebar.dataset.agManualCollapsed === 'true';
-        setSidebarCollapsed(sidebar, !isCollapsed);
+        if (document.body?.classList.contains('ag-sidebar-force-open')) {
+          collapseRightSidebarOuter(sidebar);
+        } else if (isCollapsed || !document.body?.classList.contains('ag-sidebar-native-collapsed')) {
+          forceOpenRightSidebar(sidebar);
+        }
       }, true);
     }
     const observer = new MutationObserver(() => {
@@ -2713,7 +2862,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const sidebar = document.querySelector('.Root__right-sidebar');
     document.body?.classList.remove('ag-sidebar-on-left', 'ag-sidebar-on-right');
     document.getElementById('ag-sidebar-reveal-hitbox')?.remove();
-    document.documentElement.style.removeProperty('--ag-sidebar-space');
+    if (!document.body?.classList.contains('ag-sidebar-force-open')) {
+      document.documentElement.style.removeProperty('--ag-sidebar-space');
+    }
     document.documentElement.style.removeProperty('--ag-sidebar-collapsed-width');
     if (!sidebar) return;
     sidebar.classList.remove('ag-sidebar-left', 'ag-sidebar-right', 'ag-sidebar-collapsed');
@@ -3179,6 +3330,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     now_mode: 'colored', now_gradient_enabled: 'false', now_color: '#2a2034', now_color_2: '#5b3d7a', now_gradient_angle: '135', now_gradient_position: '50', now_gradient_blend: '36', now_brightness: '72', now_frost: '52',
     now_width: '860', now_height: '80', now_radius: '40', cover_spin: 'false',
     sidebar_song_bg: 'true', sidebar_bg_strength: '60',
+    page_song_bg: 'false',
     glow_opacity: '0.8', glow_size: '155', blobs_opacity: '0.25',
     glass_reflection: 'true', glass_blur: '24',
     performance_mode: 'false'
@@ -3399,6 +3551,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Background Glow Intensity</label>${tip('Controls the strength of the soft background glow.')}</span><div class="ag-angle-control"><input type="range" id="ag-range-blobs_opacity" min="0" max="1" step="0.05" value="${getSetting('blobs_opacity')}"/><span id="ag-blobs-opacity-value">${Math.round(Number(getSetting('blobs_opacity')) * 100)}%</span></div></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Song Sidebar BG</label>${tip('Uses the current cover as a blurred frosted background in the right sidebar.')}</span><input type="checkbox" id="ag-check-sidebar_song_bg" ${getSetting('sidebar_song_bg') === 'true' ? 'checked' : ''}/></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Sidebar BG Strength</label>${tip('Adjusts how strongly the cover colors show through the sidebar glass.')}</span><input type="range" id="ag-range-sidebar_bg_strength" min="0" max="100" step="5" value="${getSetting('sidebar_bg_strength')}"/></div>
+              <div class="ag-setting-item"><span class="ag-setting-label"><label>Song Background Blur</label>${tip('Uses the current cover as an optional blurred page background without changing Hero Glow or Background Glow settings.')}</span><input type="checkbox" id="ag-check-page_song_bg" ${getSetting('page_song_bg') === 'true' ? 'checked' : ''}/></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>FrostedGlass/Glass</label>${tip('Adds a stronger reflective border and inset shine to glass surfaces.')}</span><input type="checkbox" id="ag-check-glass_reflection" ${getSetting('glass_reflection') === 'true' ? 'checked' : ''}/></div>
               <div class="ag-setting-item"><span class="ag-setting-label"><label>Frosted Glass Blur</label>${tip('Controls blur amount for AmbientGlass glass panels.')}</span><input type="range" id="ag-range-glass_blur" min="0" max="80" step="2" value="${getSetting('glass_blur')}"/></div>
               <div class="ag-setting-item ag-performance-setting"><span class="ag-setting-label"><label>Performance Mode</label><span class="ag-beta-sticker" aria-label="Beta">BETA</span>${tip('Reduces heavy blur, shadows, hover effects, and background polling for smoother use on weaker PCs.')}</span><input type="checkbox" id="ag-check-performance_mode" ${isPerformanceMode() ? 'checked' : ''}/></div>
@@ -3613,6 +3766,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     const nowRadius = Math.max(8, Math.min(56, Number(getSetting('now_radius')) || 40));
     const coverSpin = getSetting('cover_spin') === 'true';
     const sidebarSongBg = getSetting('sidebar_song_bg') === 'true';
+    const pageSongBg = getSetting('page_song_bg') === 'true';
     const sidebarBgStrength = Math.max(0, Math.min(100, Number(getSetting('sidebar_bg_strength')) || 60));
     const btn_bg = getSetting('btn_bg');
     const btn_icon = getSetting('btn_icon');
@@ -3642,8 +3796,11 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     root.style.setProperty('--ag-now-radius', nowRadius + 'px');
     document.body?.classList.toggle('ag-cover-spin', coverSpin);
     document.body?.classList.toggle('ag-performance-mode', isPerformanceMode());
+    document.body?.classList.toggle('ag-page-song-bg-enabled', pageSongBg);
     root.style.setProperty('--ag-sidebar-cover-opacity', (sidebarBgStrength / 100).toFixed(2));
     root.style.setProperty('--ag-sidebar-cover-blur', (28 + sidebarBgStrength * 0.42).toFixed(0) + 'px');
+    root.style.setProperty('--ag-page-cover-opacity', (0.10 + sidebarBgStrength / 260).toFixed(2));
+    root.style.setProperty('--ag-page-cover-blur', (36 + sidebarBgStrength * 0.48).toFixed(0) + 'px');
     document.body?.classList.toggle('ag-sidebar-song-bg-disabled', !sidebarSongBg);
     root.style.setProperty('--ag-now-frost-blur', nowMode === 'frosted' ? (18 + nowFrost * 0.62).toFixed(0) + 'px' : 'var(--ag-glass-blur, 24px)');
     root.style.setProperty('--ag-now-frost-saturate', nowMode === 'frosted' ? (130 + nowFrost * 0.9).toFixed(0) + '%' : '180%');
@@ -3959,6 +4116,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function hideAboutArtistCards() {
+    const now = Date.now();
+    if (now - _lastAboutArtistScan < (document.body?.classList.contains('ag-sidebar-force-open') ? 5000 : 1800)) return;
+    _lastAboutArtistScan = now;
     const sidebar = document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], aside[data-testid="right-sidebar"]');
     if (!sidebar) return;
     const candidates = Array.from(sidebar.querySelectorAll('section, article, div, [role="region"]'));
@@ -4370,10 +4530,14 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function runRuntimeFixes(mode = 'full') {
+    const path = Spicetify.Platform.History.location.pathname || '';
+    const isMarketplacePage = path.includes('marketplace');
+    const isSearchPage = path.includes('/search') || path.includes('search');
+    const sidebarBusy = document.body?.classList.contains('ag-sidebar-force-open') || document.body?.classList.contains('ag-sidebar-resizing');
     if (mode === 'light') {
       agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
       if (!_layoutEditMode) agSafeRun('queueVisibilityUpdate', queueVisibilityUpdate);
-      if ((Spicetify.Platform.History.location.pathname || '').includes('marketplace')) {
+      if (isMarketplacePage) {
         agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
         agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing);
         agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
@@ -4394,8 +4558,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
     if (!_layoutEditMode) agSafeRun('queueVisibilityUpdate', queueVisibilityUpdate);
     agSafeRun('fixFriendsPanel', fixFriendsPanel);
-    if (!performanceMode) agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);
-    if (!performanceMode) agSafeRun('hideAboutArtistCards', hideAboutArtistCards);
+    if ((!performanceMode || getSetting('page_song_bg') === 'true') && (!sidebarBusy || getSetting('page_song_bg') === 'true')) agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);
+    if (!performanceMode && !document.body?.classList.contains('ag-sidebar-resizing')) agSafeRun('hideAboutArtistCards', hideAboutArtistCards);
     agSafeRun('syncSidebarOuterCollapse', syncSidebarOuterCollapse);
     agSafeRun('updateSidebarResizeHitbox', updateSidebarResizeHitbox);
     agSafeRun('syncFriendsSidebarState', () => syncFriendsSidebarState());
@@ -4405,10 +4569,12 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       agSafeRun('fixSubmenuScroll', fixSubmenuScroll);
     }
     agSafeRun('fixYouLiked', fixYouLiked);
-    agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
-    agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing);
-    agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
-    agSafeRun('updateSearchPageRedesign', updateSearchPageRedesign);
+    if (isMarketplacePage) {
+      agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
+      agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing);
+      agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
+    }
+    if (isSearchPage) agSafeRun('updateSearchPageRedesign', updateSearchPageRedesign);
     agSafeRun('restoreNativeSidebar', restoreNativeSidebar);
     const hasJamUi = !!document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], [data-testid="queue-page"], .main-connectBar-connectBar, [class*="connectBar"], #ag-jam-floating-pill');
     if (hasJamUi) agSafeRun('updateJamPillLegacy', updateJamPillLegacy);
@@ -4428,7 +4594,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     localStorage.removeItem('ag-privacy');
     document.getElementById('ag-privacy-logic')?.remove();
     
-    triggerStartupAnimation(); createBlobs(); createHeroGlow(); createGlowSmoother();
+    triggerStartupAnimation(); createPageCoverBackground(); createBlobs(); createHeroGlow(); createGlowSmoother();
     createHomeCluster(); createSearchOverlay(); createUpNextCard(); createLibraryPanel();
     setTimeout(() => agSafeRun('showOnboarding', () => showOnboarding(false)), 1000);
     setupAmbientSearchHotkey();
@@ -4454,39 +4620,59 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       scheduleRuntimeFix('light', 40);
     }, true);
     try { Spicetify.Platform.History.listen(() => {
+      const path = Spicetify.Platform.History.location.pathname || '';
       markDockDirty();
-      agSafeRun('updateSearchPageRedesign', updateSearchPageRedesign);
-      agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
-      [120, 420, 900, 1600].forEach(delay => setTimeout(() => agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing), delay));
-      [140, 460, 940, 1650].forEach(delay => setTimeout(() => agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome), delay));
+      if (path.includes('/search') || path.includes('search')) agSafeRun('updateSearchPageRedesign', updateSearchPageRedesign);
+      if (path.includes('marketplace')) {
+        agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
+        [120, 420, 900, 1600].forEach(delay => setTimeout(() => agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing), delay));
+        [140, 460, 940, 1650].forEach(delay => setTimeout(() => agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome), delay));
+      }
       scheduleRuntimeFix('full', 120);
     }); } catch {}
     fixFriendsPanel();
     runRuntimeFixes();
 
+    const getMutationSignal = node => {
+      if (!node || node.nodeType !== 1) return '';
+      const className = typeof node.className === 'string' ? node.className : '';
+      const aria = node.getAttribute?.('aria-label') || '';
+      const testId = node.getAttribute?.('data-testid') || '';
+      const role = node.getAttribute?.('role') || '';
+      const id = node.id || '';
+      return `${node.tagName || ''} ${id} ${className} ${aria} ${testId} ${role}`.toLowerCase();
+    };
     const observer = new MutationObserver(mutations => {
       let needsLight = false;
       let needsFull = false;
       let needsMenu = false;
       let needsJam = false;
       let needsDock = false;
+      let inspected = 0;
       for (const mutation of mutations) {
         if (mutation.type !== 'childList') continue;
         const touched = [...mutation.addedNodes, ...mutation.removedNodes].filter(node => node?.nodeType === 1);
         if (!touched.length) continue;
         for (const node of touched) {
-          const html = node.outerHTML || '';
-          const text = node.textContent || '';
-          if (html.includes('contextMenu') || html.includes('role="menu"') || text.toLowerCase().includes('find a playlist')) needsMenu = true;
-          if (html.includes('connectBar') || text.toLowerCase().includes('start a jam') || text.toLowerCase().includes(' jam')) needsJam = true;
-          if (html.includes('main-userWidget') ||
-              html.includes('marketplace-extension-button') ||
-              html.includes('stats-extension-button') ||
-              html.includes('extension-button') ||
-              html.includes('aria-label') && html.includes('Marketplace') ||
-              html.includes('aria-label') && html.includes('Stat')) needsDock = true;
-          if (html.includes('buddyFeed') || html.includes('entityHeader') || html.includes('marketplace')) needsFull = true;
+          if (++inspected > 80) {
+            needsLight = true;
+            break;
+          }
+          const signal = getMutationSignal(node);
+          const text = signal.includes('context') || signal.includes('connectbar') || signal.includes('jam')
+            ? (node.textContent || '').toLowerCase().slice(0, 240)
+            : '';
+          if (signal.includes('contextmenu') || signal.includes(' menu') || text.includes('find a playlist')) needsMenu = true;
+          if (signal.includes('connectbar') || text.includes('start a jam') || text.includes(' jam')) needsJam = true;
+          if (signal.includes('main-userwidget') ||
+              signal.includes('marketplace-extension-button') ||
+              signal.includes('stats-extension-button') ||
+              signal.includes('extension-button') ||
+              signal.includes('marketplace') ||
+              signal.includes('stat')) needsDock = true;
+          if (signal.includes('buddyfeed') || signal.includes('entityheader') || signal.includes('marketplace')) needsFull = true;
         }
+        if (inspected > 80) break;
       }
       needsLight = needsMenu || needsJam || needsDock;
       if (needsDock) markDockDirty();
@@ -4507,13 +4693,14 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     repeat(() => scheduleRuntimeFix('light', 0), () => isPerformanceMode() ? 30000 : 15000);
     repeat(() => agSafeRun('updateUpNextCard', updateUpNextCard), () => isPerformanceMode() ? 10000 : 5000);
     repeat(() => {
-      if (!isPerformanceMode()) agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);
-    }, () => isPerformanceMode() ? 12000 : 1500);
+      const sidebarBusy = document.body?.classList.contains('ag-sidebar-force-open') || document.body?.classList.contains('ag-sidebar-resizing');
+      if ((!isPerformanceMode() || getSetting('page_song_bg') === 'true') && (!sidebarBusy || getSetting('page_song_bg') === 'true')) agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);
+    }, () => isPerformanceMode() ? 12000 : 2500);
     repeat(() => {
       if (!isPerformanceMode()) agSafeRun('hideAboutArtistCards', hideAboutArtistCards);
     }, () => isPerformanceMode() ? 6000 : 2000);
-    repeat(() => agSafeRun('syncSidebarOuterCollapse', syncSidebarOuterCollapse), () => isPerformanceMode() ? 2500 : 1000);
-    repeat(() => agSafeRun('updateSidebarResizeHitbox', updateSidebarResizeHitbox), () => isPerformanceMode() ? 4000 : 2000);
+    repeat(() => agSafeRun('syncSidebarOuterCollapse', syncSidebarOuterCollapse), () => isPerformanceMode() ? 4000 : 1600);
+    repeat(() => agSafeRun('updateSidebarResizeHitbox', updateSidebarResizeHitbox), () => isPerformanceMode() ? 6000 : 3000);
     repeat(() => {
       markDockDirty();
       scheduleRuntimeFix('full', 0);
