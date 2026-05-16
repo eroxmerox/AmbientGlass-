@@ -1,51 +1,29 @@
 @echo off
-setlocal EnableExtensions
+setlocal
 
-set "SPICETIFY_DIR=%APPDATA%\spicetify"
-set "CONFIG_FILE=%SPICETIFY_DIR%\config-xpui.ini"
-set "THEME_TARGET=%SPICETIFY_DIR%\Themes\AmbientGlass"
-set "EXTENSION_TARGET=%SPICETIFY_DIR%\Extensions\theme.js"
-set "CURRENT_THEME="
+echo =========================================
+echo AmbientGlass Theme Uninstaller
+echo =========================================
+echo.
+
+set "THEME_DIR=%APPDATA%\spicetify\Themes\AmbientGlass"
+set "EXT_DIR=%APPDATA%\spicetify\Extensions"
+
+echo [1/3] Removing theme files...
+if exist "%THEME_DIR%" rmdir /s /q "%THEME_DIR%"
+if exist "%EXT_DIR%\theme.js" del /q "%EXT_DIR%\theme.js"
+
+echo [2/3] Resetting Spicetify configuration...
+REM Removes the extension from the config
+call spicetify config extensions theme.js-
+REM Select empty theme (default)
+call spicetify config current_theme "" color_scheme ""
+
+echo [3/3] Applying changes...
+call spicetify apply
 
 echo.
-echo AmbientGlass uninstaller
-echo ------------------------
-
-where spicetify >nul 2>nul
-if errorlevel 1 (
-  echo [ERROR] Spicetify was not found in PATH.
-  exit /b 1
-)
-
-if exist "%CONFIG_FILE%" (
-  for /f "tokens=2 delims==" %%A in ('findstr /B /C:"current_theme" "%CONFIG_FILE%"') do set "CURRENT_THEME=%%A"
-)
-set "CURRENT_THEME=%CURRENT_THEME: =%"
-
-spicetify config extensions theme.js-
-if errorlevel 1 goto :fail
-
-if /I "%CURRENT_THEME%"=="AmbientGlass" (
-  spicetify config current_theme ""
-  if errorlevel 1 goto :fail
-  spicetify config color_scheme ""
-  if errorlevel 1 goto :fail
-)
-
-if exist "%EXTENSION_TARGET%" del /F /Q "%EXTENSION_TARGET%"
-if errorlevel 1 goto :fail
-
-if exist "%THEME_TARGET%" rmdir /S /Q "%THEME_TARGET%"
-if errorlevel 1 goto :fail
-
-spicetify apply
-if errorlevel 1 goto :fail
-
-echo.
-echo [OK] AmbientGlass was uninstalled.
-exit /b 0
-
-:fail
-echo.
-echo [ERROR] AmbientGlass uninstallation failed.
-exit /b 1
+echo =========================================
+echo Uninstallation complete!
+echo =========================================
+pause
