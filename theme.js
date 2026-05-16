@@ -444,12 +444,12 @@
   function positionUpNextCard() {
     const card = document.getElementById('ag-up-next-card');
     const nowPlayingCandidates = [
-      ...document.querySelectorAll('.main-nowPlayingBar-container, .Root__now-playing-bar, .Root__now-playing-bar > *')
+      ...document.querySelectorAll('.main-nowPlayingBar-container, .main-nowPlayingBar-nowPlayingBar, .Root__now-playing-bar, .Root__now-playing-bar > *')
     ].map(el => ({ el, rect: el.getBoundingClientRect() }))
       .filter(({ rect }) =>
-        rect.width >= 240 &&
-        rect.height >= 40 &&
-        rect.bottom >= window.innerHeight * 0.6
+        rect.width >= 200 &&
+        rect.height >= 10 &&
+        rect.bottom >= window.innerHeight * 0.5
       )
       .sort((a, b) => b.rect.bottom - a.rect.bottom || b.rect.width - a.rect.width);
     const nowPlaying = nowPlayingCandidates[0]?.el || document.getElementById('ag-centered-search');
