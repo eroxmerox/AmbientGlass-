@@ -165,23 +165,59 @@
     }, delay);
   }
 
+  function runRuntimeRefreshBurst(mode = 'light', delays = [0, 120, 360]) {
+    delays.forEach(delay => {
+      window.setTimeout(() => agSafeRun(`runRuntimeFixes:${mode}`, () => runRuntimeFixes(mode)), delay);
+    });
+  }
+
+  function refreshUpNextSoon(delays = [0, 250, 900]) {
+    delays.forEach(delay => {
+      window.setTimeout(() => agSafeRun('updateUpNextCard', updateUpNextCard), delay);
+    });
+  }
+
   function markDockDirty() {
     _dockButtonsDirty = true;
+  }
+
+  function syncPageClasses() {
+    const path = Spicetify.Platform?.History?.location?.pathname || '';
+    const isMarketplacePage = path.includes('marketplace') || !!document.querySelector('.marketplace-header');
+    const isSearchPage = path.includes('/search') || path.includes('search');
+    const isEntityPage = /^\/(playlist|album|artist|collection)\//.test(path) ||
+      !!document.querySelector('.main-entityHeader-container');
+    const hasHomeContent = !!document.querySelector('.view-homeShortcutsGrid-shortcut, [data-testid="home-card"]');
+    const isHomePage = !isMarketplacePage && !isSearchPage && (
+      path === '/' ||
+      path === '/home' ||
+      hasHomeContent
+    );
+    document.body?.classList.toggle('ag-home-page', isHomePage);
+    document.body?.classList.toggle('ag-entity-page', isEntityPage && !isHomePage && !isMarketplacePage && !isSearchPage);
+    return { path, isMarketplacePage, isSearchPage, isHomePage, isEntityPage };
   }
 
   function applyLayout(layout = getLayout()) {
     document.body?.classList.toggle('ag-layout-custom', !!localStorage.getItem('ag-layout') || _layoutEditMode);
     const pinHomeTop = !_layoutEditMode && getMainScrollY() > 12;
+    const cluster = document.getElementById('ag-home-cluster');
+    const search = document.getElementById('ag-centered-search');
+    const nowPlaying = document.querySelector('.Root__now-playing-bar');
+    const jamPill = document.getElementById('ag-jam-floating-pill');
     const signature = [
       _layoutEditMode ? 'edit' : 'live',
       pinHomeTop ? 'pinned' : 'free',
       layout.homeCluster.x, layout.homeCluster.y,
       layout.search.x, layout.search.y,
-      layout.nowPlaying.x, layout.nowPlaying.y
+      layout.nowPlaying.x, layout.nowPlaying.y,
+      cluster ? 1 : 0,
+      search ? 1 : 0,
+      nowPlaying ? 1 : 0,
+      jamPill ? 1 : 0
     ].join('|');
     if (signature === _lastAppliedLayoutSignature) return;
     _lastAppliedLayoutSignature = signature;
-    const cluster = document.getElementById('ag-home-cluster');
     if (cluster) {
       setStyleIfChanged(cluster, 'left', pinHomeTop ? '50%' : `${layout.homeCluster.x}%`, 'important');
       setStyleIfChanged(cluster, 'top', pinHomeTop ? '60px' : `${layout.homeCluster.y}%`, 'important');
@@ -192,20 +228,17 @@
       setStyleIfChanged(cluster, 'transform', 'translate(-50%, -50%)', 'important');
     }
 
-    const search = document.getElementById('ag-centered-search');
     if (search) {
       setStyleIfChanged(search, 'left', `${layout.search.x}%`);
       setStyleIfChanged(search, 'top', `${layout.search.y}%`);
       setStyleIfChanged(search, 'transform', 'translate(-50%, -50%) scale(1)');
     }
 
-    const nowPlaying = document.querySelector('.Root__now-playing-bar');
     if (nowPlaying) {
       nowPlaying.style.setProperty('--ag-now-x', layout.nowPlaying.x + '%');
       nowPlaying.style.setProperty('--ag-now-y', layout.nowPlaying.y + '%');
     }
 
-    const jamPill = document.getElementById('ag-jam-floating-pill');
     if (jamPill) {
       setStyleIfChanged(jamPill, 'left', `${layout.nowPlaying.x}%`, 'important');
       setStyleIfChanged(jamPill, 'top', `calc(${layout.nowPlaying.y}% - 68px)`, 'important');
@@ -240,7 +273,7 @@
     if (!el) return;
     
     // Marketplace is a special case: keep the native top bar visible.
-    const path = Spicetify.Platform.History.location.pathname;
+    const path = Spicetify.Platform?.History?.location?.pathname || '';
     const isMarketplace = path.includes("marketplace") || !!document.querySelector('.marketplace-header') || !!document.querySelector('#marketplace-extension-button');
 
     if (isMarketplace) {
@@ -410,10 +443,16 @@
 
   function positionUpNextCard() {
     const card = document.getElementById('ag-up-next-card');
-    const nowPlaying = document.querySelector('.main-nowPlayingBar-container') ||
-                       document.querySelector('.Root__now-playing-bar > *') ||
-                       document.querySelector('.Root__now-playing-bar') ||
-                       document.getElementById('ag-centered-search');
+    const nowPlayingCandidates = [
+      ...document.querySelectorAll('.main-nowPlayingBar-container, .Root__now-playing-bar, .Root__now-playing-bar > *')
+    ].map(el => ({ el, rect: el.getBoundingClientRect() }))
+      .filter(({ rect }) =>
+        rect.width >= 240 &&
+        rect.height >= 40 &&
+        rect.bottom >= window.innerHeight * 0.6
+      )
+      .sort((a, b) => b.rect.bottom - a.rect.bottom || b.rect.width - a.rect.width);
+    const nowPlaying = nowPlayingCandidates[0]?.el || document.getElementById('ag-centered-search');
     if (!card || !nowPlaying) return;
     const rect = nowPlaying.getBoundingClientRect();
     if (!rect.width) return;
@@ -433,13 +472,35 @@
     const position = Number(data.position || data.progress || data.progressMs || 0);
     const since = Number(data.positionAsOfTimestamp || data.timestamp || 0);
     if (position && since) return position + Math.max(0, Date.now() - since);
+    const progress = getDomPlaybackProgress();
+    if (progress.positionMs > 0) return progress.positionMs;
     return position || 0;
   }
 
   function getPlayerDurationMs() {
     const item = Spicetify.Player?.data?.item || {};
     const metadata = item.metadata || {};
-    return Number(item.duration?.milliseconds || item.duration_ms || metadata.duration || metadata.duration_ms || 0);
+    const duration = Number(item.duration?.milliseconds || item.duration_ms || metadata.duration || metadata.duration_ms || 0);
+    if (duration > 0) return duration;
+    return getDomPlaybackProgress().durationMs;
+  }
+
+  function getDomPlaybackProgress() {
+    const slider = document.querySelector(`
+      [data-testid="playback-progressbar"] input[type="range"],
+      [data-testid="playback-progressbar"] [role="slider"],
+      .playback-progressbar input[type="range"],
+      .playback-progressbar [role="slider"]
+    `);
+    if (!slider) return { positionMs: 0, durationMs: 0 };
+    const current = Number(slider.value || slider.getAttribute('aria-valuenow') || 0);
+    const max = Number(slider.max || slider.getAttribute('aria-valuemax') || 0);
+    if (!(current >= 0) || !(max > 0)) return { positionMs: 0, durationMs: 0 };
+    const unitScale = max <= 1000 ? 1000 : 1;
+    return {
+      positionMs: current * unitScale,
+      durationMs: max * unitScale
+    };
   }
 
   function normalizeSpotifyImageUrl(url) {
@@ -1186,7 +1247,7 @@
     const duration = getPlayerDurationMs();
     const position = getPlayerPositionMs();
     const remaining = duration - position;
-    const shouldShow = duration > 0 && remaining > 0 && remaining <= 20000 && !isModalOpen() && !isFullscreen();
+    const shouldShow = duration > 0 && remaining > 0 && remaining <= 10000 && !isModalOpen() && !isFullscreen();
     if (!shouldShow) {
       card.classList.remove('ag-up-next-visible');
       return;
@@ -1491,16 +1552,13 @@
   const _artistImageCache = new Map();
 
   async function healArtistImage() {
-    const path = Spicetify.Platform.History.location.pathname;
+    const path = Spicetify.Platform?.History?.location?.pathname || '';
     if (!path.includes('/artist/')) return;
 
     const artistId = path.split('/').pop();
     const artistUri = `spotify:artist:${artistId}`;
     const header = document.querySelector('.main-entityHeader-headerText');
-    
-    // Avoid duplicate repair: heal only when no image exists yet.
-    const existingImg = document.querySelector('.main-entityHeader-imageContainer:not(.ag-healed-image)');
-    if (!header || existingImg || document.querySelector('.ag-healed-image')) return;
+    if (!header || document.querySelector('.ag-healed-image')) return;
 
     if (_artistImageCache.has(artistId)) {
       injectHealedImage(header, _artistImageCache.get(artistId));
@@ -1514,27 +1572,21 @@
       
       let imgUrl = savedArtist?.images?.[0]?.url || savedArtist?.image?.url;
 
-      // 3. Falls nicht in Library, Cosmos fragen aber Avatar PRIORISIEREN
+      // Artist pages use AmbientGlass' own profile image, not Spotify's banner art.
       if (!imgUrl) {
         const data = await Spicetify.CosmosAsync.get(`hm://artist/v1/artist/${artistId}/desktop`);
-        imgUrl = data.visuals?.avatar?.sources?.[0]?.url || data.header_image?.url;
+        imgUrl = data.visuals?.avatar?.sources?.[0]?.url ||
+          data.visuals?.avatarImage?.sources?.[0]?.url ||
+          data.avatar?.sources?.[0]?.url ||
+          data.profile?.avatar?.sources?.[0]?.url ||
+          '';
       }
       
       if (imgUrl) {
         _artistImageCache.set(artistId, imgUrl);
         injectHealedImage(header, imgUrl);
       }
-    } catch (e) {
-      // Letzter Fallback
-      const banner = document.querySelector('[class*="jX9OuHoZE8EC2SYi"]');
-      if (banner) {
-        const match = (banner.getAttribute('style') || '').match(/url\("?(.+?)"?\)/);
-        if (match) {
-          _artistImageCache.set(artistId, match[1]);
-          injectHealedImage(header, match[1]);
-        }
-      }
-    }
+    } catch {}
   }
 
   function injectHealedImage(header, imgUrl) {
@@ -2252,7 +2304,7 @@
 
   function isFullscreen() {
     try {
-      const path = Spicetify.Platform.History.location.pathname || '';
+      const path = Spicetify.Platform?.History?.location?.pathname || '';
       const fulls = ['/lyrics', '/queue', '/preferences'];
       if (fulls.some(r => path.startsWith(r))) return true;
       return !!(
@@ -2266,12 +2318,22 @@
   }
 
   function isModalOpen() {
+    const isVisible = el => {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        Number(style.opacity || 1) > 0 &&
+        rect.width > 0 &&
+        rect.height > 0;
+    };
     return !!(
-      document.querySelector('[data-testid="dialog"]') ||
-      document.querySelector('[class*="GenericModal"]') ||
-      document.querySelector('[class*="modal-overlay"]') ||
-      document.querySelector('.main-embedWidgetGenerator-container') ||
-      document.querySelector('[class*="Backdrop"]') ||
+      Array.from(document.querySelectorAll('[data-testid="dialog"]')).some(isVisible) ||
+      Array.from(document.querySelectorAll('[class*="GenericModal"]')).some(isVisible) ||
+      Array.from(document.querySelectorAll('[class*="modal-overlay"]')).some(isVisible) ||
+      Array.from(document.querySelectorAll('.main-embedWidgetGenerator-container')).some(isVisible) ||
+      Array.from(document.querySelectorAll('[class*="Backdrop"]')).some(isVisible) ||
       document.getElementById('ag-settings-panel') ||
       document.getElementById('ag-layout-overlay')
     );
@@ -2297,7 +2359,7 @@
 
     applyLayout(layout);
 
-    const path = Spicetify.Platform.History.location.pathname || '';
+    const { path } = syncPageClasses();
     const isSearchPage = path.startsWith('/search/');
     const isNarrow = window.innerWidth < 750;
     const isExtensionPage = path.includes('marketplace') ||
@@ -2611,7 +2673,7 @@
   }
 
   function getSearchPageQuery() {
-    const path = Spicetify.Platform.History.location.pathname || '';
+    const path = Spicetify.Platform?.History?.location?.pathname || '';
     if (!path.startsWith('/search/')) return '';
     return decodeURIComponent(path.replace(/^\/search\/?/, '').split('/')[0] || '').trim();
   }
@@ -2908,7 +2970,12 @@
   }
 
   function fixMarketplaceDropdown() {
-    const path = Spicetify.Platform.History.location.pathname;
+    // Keep Marketplace native. The custom reskin has proven too fragile against upstream DOM changes.
+    document.body?.classList.remove('ag-marketplace-page');
+    document.getElementById("ag-marketplace-tabs")?.remove();
+    return;
+
+    const path = Spicetify.Platform?.History?.location?.pathname || '';
     if (!path.includes("marketplace")) {
       document.body?.classList.remove('ag-marketplace-page');
       document.getElementById("ag-marketplace-tabs")?.remove();
@@ -3017,7 +3084,7 @@
   }
 
   function alignMarketplaceTabsToHome() {
-    const path = Spicetify.Platform.History.location.pathname;
+    const path = Spicetify.Platform?.History?.location?.pathname || '';
     if (!path.includes("marketplace")) return;
     const home = document.getElementById('ag-home-button') ||
                  document.querySelector('#ag-home-cluster .ag-home-main') ||
@@ -3042,7 +3109,7 @@
   }
 
   function hideMarketplaceMoreDropdown() {
-    const path = Spicetify.Platform.History.location.pathname;
+    const path = Spicetify.Platform?.History?.location?.pathname || '';
     if (!path.includes("marketplace")) return;
     document.querySelectorAll('[data-ag-marketplace-more="true"]').forEach(el => {
       const text = `${el.textContent || ''} ${el.getAttribute?.('aria-label') || ''} ${el.title || ''}`.trim().toLowerCase();
@@ -4443,6 +4510,15 @@
     });
   }
 
+  function refreshMenusSoon(delays = [0, 40, 120]) {
+    delays.forEach(delay => {
+      window.setTimeout(() => {
+        agSafeRun('fixSubmenuScroll', fixSubmenuScroll);
+        agSafeRun('injectSettingsToMenu', injectSettingsToMenu);
+      }, delay);
+    });
+  }
+
   function updateJamPillLegacy() {
     const isVisible = el => {
       if (!el) return false;
@@ -4562,18 +4638,12 @@
   }
 
   function runRuntimeFixes(mode = 'full') {
-    const path = Spicetify.Platform.History.location.pathname || '';
-    const isMarketplacePage = path.includes('marketplace');
-    const isSearchPage = path.includes('/search') || path.includes('search');
+    const { isMarketplacePage, isSearchPage } = syncPageClasses();
     const sidebarBusy = document.body?.classList.contains('ag-sidebar-force-open') || document.body?.classList.contains('ag-sidebar-resizing');
     if (mode === 'light') {
       agSafeRun('enforceProfileHitbox', enforceProfileHitbox);
       if (!_layoutEditMode) agSafeRun('queueVisibilityUpdate', queueVisibilityUpdate);
-      if (isMarketplacePage) {
-        agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
-        agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing);
-        agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
-      }
+      if (isMarketplacePage) agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
       const hasMenu = !!document.querySelector('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content], [data-testid="context-menu"]');
       if (hasMenu) {
         agSafeRun('injectSettingsToMenu', injectSettingsToMenu);
@@ -4601,23 +4671,11 @@
       agSafeRun('fixSubmenuScroll', fixSubmenuScroll);
     }
     agSafeRun('fixYouLiked', fixYouLiked);
-    if (isMarketplacePage) {
-      agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
-      agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing);
-      agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
-    }
+    if (isMarketplacePage) agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
     if (isSearchPage) agSafeRun('updateSearchPageRedesign', updateSearchPageRedesign);
     agSafeRun('restoreNativeSidebar', restoreNativeSidebar);
     const hasJamUi = !!document.querySelector('.Root__right-sidebar, [data-testid="right-sidebar"], [data-testid="queue-page"], .main-connectBar-connectBar, [class*="connectBar"], #ag-jam-floating-pill');
     if (hasJamUi) agSafeRun('updateJamPillLegacy', updateJamPillLegacy);
-    agSafeRun('hideMarketplaceSearch', () => {
-      const mSearch = document.querySelector(".marketplace-header__search-container");
-      if (mSearch) {
-        mSearch.style.setProperty("opacity", "0", "important");
-        mSearch.style.setProperty("pointer-events", "none", "important");
-        mSearch.style.setProperty("height", "0", "important");
-      }
-    });
   }
 
   function init() {
@@ -4644,23 +4702,64 @@
       updateSidebarResizeHitbox();
       scheduleRuntimeFix('light', 40);
     });
+    window.addEventListener('focus', () => {
+      markDockDirty();
+      runRuntimeRefreshBurst('light', [0, 120, 360]);
+      refreshUpNextSoon();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      markDockDirty();
+      runRuntimeRefreshBurst('light', [0, 120, 360]);
+      refreshUpNextSoon();
+    });
     window.addEventListener('pointerdown', () => {
       markDockDirty();
       scheduleRuntimeFix('light', 40);
     }, true);
+    document.addEventListener('pointerover', event => {
+      const target = event.target?.closest?.(
+        '.main-contextMenu-menu, [role="menu"], [data-radix-menu-content], [data-testid="context-menu"], [aria-haspopup="menu"], .main-contextMenu-subMenuIcon'
+      );
+      if (!target) return;
+      refreshMenusSoon([0, 60, 140]);
+    }, true);
+    document.addEventListener('focusin', event => {
+      const target = event.target?.closest?.(
+        '.main-contextMenu-menu, [role="menu"], [data-radix-menu-content], [data-testid="context-menu"], [aria-haspopup="menu"]'
+      );
+      if (!target) return;
+      refreshMenusSoon([0, 60, 140]);
+    }, true);
     try { Spicetify.Platform.History.listen(() => {
-      const path = Spicetify.Platform.History.location.pathname || '';
+      const path = Spicetify.Platform?.History?.location?.pathname || '';
       markDockDirty();
       if (path.includes('/search') || path.includes('search')) agSafeRun('updateSearchPageRedesign', updateSearchPageRedesign);
-      if (path.includes('marketplace')) {
-        agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome);
-        [120, 420, 900, 1600].forEach(delay => setTimeout(() => agSafeRun('fixMarketplaceSpacing', fixMarketplaceSpacing), delay));
-        [140, 460, 940, 1650].forEach(delay => setTimeout(() => agSafeRun('alignMarketplaceTabsToHome', alignMarketplaceTabsToHome), delay));
-      }
-      scheduleRuntimeFix('full', 120);
+      if (path.includes('marketplace')) agSafeRun('fixMarketplaceDropdown', fixMarketplaceDropdown);
+      runRuntimeRefreshBurst('full', [40, 180, 500, 1000]);
+      refreshUpNextSoon();
     }); } catch {}
+    try {
+      Spicetify.Player.addEventListener('songchange', () => {
+        _upNextLastUri = '';
+        _upNextLastImage = '';
+        _upNextLastFetch = 0;
+        _upNextCached = null;
+        markDockDirty();
+        runRuntimeRefreshBurst('light', [0, 120, 360]);
+        refreshUpNextSoon([0, 300, 1200]);
+      });
+      Spicetify.Player.addEventListener('onprogress', () => {
+        agSafeRun('updateUpNextCard', updateUpNextCard);
+      });
+    } catch {}
     fixFriendsPanel();
     runRuntimeFixes();
+    runRuntimeRefreshBurst('full', [80, 240, 600, 1200, 1800, 2600, 3800]);
+    [120, 500, 1200, 2200].forEach(delay => {
+      window.setTimeout(() => agSafeRun('healArtistImage', healArtistImage), delay);
+    });
+    refreshUpNextSoon([120, 500, 1200]);
 
     const getMutationSignal = node => {
       if (!node || node.nodeType !== 1) return '';
@@ -4677,8 +4776,16 @@
       let needsMenu = false;
       let needsJam = false;
       let needsDock = false;
+      let needsContentRefresh = false;
       let inspected = 0;
       for (const mutation of mutations) {
+        if (mutation.type === 'attributes') {
+          const signal = getMutationSignal(mutation.target);
+          if (signal.includes('context') || signal.includes(' menu') || mutation.attributeName === 'aria-expanded' || mutation.attributeName === 'data-state') {
+            needsMenu = true;
+          }
+          continue;
+        }
         if (mutation.type !== 'childList') continue;
         const touched = [...mutation.addedNodes, ...mutation.removedNodes].filter(node => node?.nodeType === 1);
         if (!touched.length) continue;
@@ -4691,7 +4798,12 @@
           const text = signal.includes('context') || signal.includes('connectbar') || signal.includes('jam')
             ? (node.textContent || '').toLowerCase().slice(0, 240)
             : '';
-          if (signal.includes('contextmenu') || signal.includes(' menu') || text.includes('find a playlist')) needsMenu = true;
+          const containsMenu = node.matches?.('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content], [data-testid="context-menu"]') ||
+            !!node.querySelector?.('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content], [data-testid="context-menu"]');
+          const containsPlaylistSubmenu = !!node.querySelector?.('input[placeholder*="playlist" i], input[aria-label*="playlist" i]') ||
+            (node.textContent || '').toLowerCase().includes('find a playlist') ||
+            (node.textContent || '').toLowerCase().includes('playlist suchen');
+          if (containsMenu || containsPlaylistSubmenu || signal.includes('contextmenu') || signal.includes(' menu') || text.includes('find a playlist')) needsMenu = true;
           if (signal.includes('connectbar') || text.includes('start a jam') || text.includes(' jam')) needsJam = true;
           if (signal.includes('main-userwidget') ||
               signal.includes('marketplace-extension-button') ||
@@ -4699,18 +4811,37 @@
               signal.includes('extension-button') ||
               signal.includes('marketplace') ||
               signal.includes('stat')) needsDock = true;
+          const containsHomeContent = node.matches?.('.view-homeShortcutsGrid-shortcut, [data-testid="home-card"]') ||
+            !!node.querySelector?.('.view-homeShortcutsGrid-shortcut, [data-testid="home-card"]');
+          if (containsHomeContent ||
+              signal.includes('main-view') ||
+              signal.includes('scrollnode') ||
+              signal.includes('home') ||
+              signal.includes('section') ||
+              signal.includes('nowplaying') ||
+              signal.includes('now-playing') ||
+              signal.includes('shortcuts')) needsContentRefresh = true;
           if (signal.includes('buddyfeed') || signal.includes('entityheader') || signal.includes('marketplace')) needsFull = true;
         }
         if (inspected > 80) break;
       }
-      needsLight = needsMenu || needsJam || needsDock;
+      needsLight = needsMenu || needsJam || needsDock || needsContentRefresh;
       if (needsDock) markDockDirty();
       if (needsLight) scheduleRuntimeFix('light', 50);
-      if (needsMenu) scheduleRuntimeFix('light', 10);
+      if (needsContentRefresh) refreshUpNextSoon([80]);
+      if (needsMenu) {
+        refreshMenusSoon();
+        scheduleRuntimeFix('light', 10);
+      }
       if (needsJam) scheduleRuntimeFix('light', 10);
       if (needsFull) scheduleRuntimeFix('full', isPerformanceMode() ? 420 : 180);
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'data-state', 'aria-expanded']
+    });
 
     const repeat = (fn, delayForMode) => {
       const tick = () => {
@@ -4720,7 +4851,7 @@
       window.setTimeout(tick, delayForMode());
     };
     repeat(() => scheduleRuntimeFix('light', 0), () => isPerformanceMode() ? 30000 : 15000);
-    repeat(() => agSafeRun('updateUpNextCard', updateUpNextCard), () => isPerformanceMode() ? 10000 : 5000);
+    repeat(() => agSafeRun('updateUpNextCard', updateUpNextCard), () => isPerformanceMode() ? 2000 : 1000);
     repeat(() => {
       const sidebarBusy = document.body?.classList.contains('ag-sidebar-force-open') || document.body?.classList.contains('ag-sidebar-resizing');
       if ((!isPerformanceMode() || getSetting('page_song_bg') === 'true') && (!sidebarBusy || getSetting('page_song_bg') === 'true')) agSafeRun('updateSidebarCoverBackground', updateSidebarCoverBackground);

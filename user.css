@@ -4466,12 +4466,12 @@ body.ag-layout-editing #ag-side-dock {
   outline-offset: 6px !important;
 }
 
-/* Up-next toast: a small glass card tied to the AmbientGlass search bar. */
+/* Up-next toast: a small glass card tied to the floating player. */
 #ag-up-next-card {
   position: fixed !important;
   left: 50%;
   top: 50%;
-  z-index: 49 !important;
+  z-index: 10020 !important;
   display: grid !important;
   grid-template-columns: 52px minmax(0, 1fr);
   align-items: center !important;
@@ -6220,4 +6220,104 @@ body.ag-performance-mode.ag-sidebar-cover-active:not(.ag-sidebar-song-bg-disable
   display: block !important;
   opacity: var(--ag-sidebar-cover-opacity, 0.42) !important;
   filter: blur(24px) saturate(120%) brightness(0.88) !important;
+}
+
+/* Final stability pass: keep Marketplace native instead of fighting its live upstream layout. */
+body:has(.marketplace-header) .marketplace-header,
+body:has(.marketplace-header) .marketplace-tabBar,
+body:has(.marketplace-header) .marketplace-tabBar-nav,
+body:has(.marketplace-header) .marketplace-tabBar-header,
+body:has(.marketplace-header) .marketplace-tabBar-headerItem,
+body:has(.marketplace-header) .marketplace-tabBar-headerItemLink,
+body:has(.marketplace-header) .marketplace-header__search-container {
+  position: revert !important;
+  inset: revert !important;
+  width: revert !important;
+  min-width: revert !important;
+  max-width: revert !important;
+  height: revert !important;
+  min-height: revert !important;
+  max-height: revert !important;
+  margin: revert !important;
+  padding: revert !important;
+  transform: revert !important;
+  opacity: revert !important;
+  visibility: revert !important;
+  pointer-events: revert !important;
+  overflow: revert !important;
+}
+
+body:has(.marketplace-header) #ag-marketplace-tabs {
+  display: none !important;
+}
+
+/* Final stability pass: style the sidebar shell, but let Spotify own its inner layout. */
+body.ag-sidebar-force-open .Root__right-sidebar [data-testid="now-playing-view"],
+body.ag-sidebar-force-open .Root__right-sidebar [data-testid="now-playing-view-background"],
+body.ag-sidebar-force-open .Root__right-sidebar .main-nowPlayingView-nowPlayingView,
+body.ag-sidebar-force-open .Root__right-sidebar .main-nowPlayingView-scrollNode,
+body.ag-sidebar-force-open .Root__right-sidebar .main-nowPlayingView-content,
+body.ag-sidebar-force-open .Root__right-sidebar .main-nowPlayingView-mainWrapper,
+body.ag-sidebar-force-open .Root__right-sidebar .main-nowPlayingView-section,
+body.ag-sidebar-force-open .Root__right-sidebar [class*="searchCategory-contentArea"],
+body.ag-sidebar-force-open .Root__right-sidebar [class*="searchCategory_contentArea"],
+body.ag-sidebar-force-open [data-testid="right-sidebar"] [data-testid="now-playing-view"],
+body.ag-sidebar-force-open [data-testid="right-sidebar"] [data-testid="now-playing-view-background"],
+body.ag-sidebar-force-open [data-testid="right-sidebar"] .main-nowPlayingView-nowPlayingView,
+body.ag-sidebar-force-open [data-testid="right-sidebar"] .main-nowPlayingView-scrollNode,
+body.ag-sidebar-force-open [data-testid="right-sidebar"] .main-nowPlayingView-content,
+body.ag-sidebar-force-open [data-testid="right-sidebar"] .main-nowPlayingView-mainWrapper,
+body.ag-sidebar-force-open [data-testid="right-sidebar"] .main-nowPlayingView-section,
+body.ag-sidebar-force-open [data-testid="right-sidebar"] [class*="searchCategory-contentArea"],
+body.ag-sidebar-force-open [data-testid="right-sidebar"] [class*="searchCategory_contentArea"] {
+  width: revert !important;
+  min-width: revert !important;
+  max-width: revert !important;
+  height: revert !important;
+  min-height: revert !important;
+  max-height: revert !important;
+  display: revert !important;
+  grid-template-columns: revert !important;
+  gap: revert !important;
+  overflow: revert !important;
+  transform: revert !important;
+}
+
+/* Final content rhythm pass: keep the 50/50 home composition, compact other pages. */
+body.ag-home-page .main-view-container__scroll-node-child {
+  padding-top: 50vh !important;
+  padding-bottom: 130px !important;
+}
+
+body.ag-home-page .ag-top-spacer {
+  height: 50vh !important;
+  min-height: 340px !important;
+}
+
+body:not(.ag-home-page):not(.ag-search-page):not(.ag-marketplace-page) .main-view-container__scroll-node-child {
+  padding-top: 132px !important;
+  padding-bottom: 120px !important;
+}
+
+body:not(.ag-home-page):not(.ag-search-page):not(.ag-marketplace-page) .ag-top-spacer {
+  height: 132px !important;
+  min-height: 132px !important;
+}
+
+body.ag-entity-page .main-view-container__scroll-node-child {
+  padding-top: 0 !important;
+  padding-bottom: 130px !important;
+}
+
+body.ag-entity-page .ag-top-spacer {
+  height: 0 !important;
+  min-height: 0 !important;
+}
+
+body.ag-entity-page .main-entityHeader-container,
+body:has(.main-entityHeader-container) .main-entityHeader-container {
+  min-height: 50vh !important;
+  padding-top: 0 !important;
+  padding-bottom: 24px !important;
+  align-items: flex-end !important;
 }
