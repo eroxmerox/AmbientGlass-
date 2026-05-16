@@ -1,5 +1,4 @@
-console.log('>> [AmbientGlass] Script Triggered! <<');
-// AmbientGlass - theme.js (v15.0)
+// AmbientGlass - theme.js (final release)
 // Branding: AmbientGlass startup screen.
 // Entrance: soft drop and zoom.
 // Layout: 50/50 split.
@@ -8,8 +7,6 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
 
 (function AmbientGlass() {
   'use strict';
-  console.log("AmbientGlass V16.5. Created by EROX");
-
   if (!Spicetify?.Player || !Spicetify?.Platform) {
     setTimeout(AmbientGlass, 300);
     return;
@@ -24,7 +21,8 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
     artist: '<path d="M12 12.25c2.899 0 5.25-2.351 5.25-5.25S14.899 1.75 12 1.75 6.75 4.101 6.75 7 9.101 12.25 12 12.25zm0-1.5c-2.071 0-3.75-1.679-3.75-3.75S9.929 3.25 12 3.25s3.75 1.679 3.75 3.75S14.071 10.75 12 10.75zM22.25 21.75H1.75v-1.5c0-3.314 2.686-6 6-6h8.5c3.314 0 6 2.686 6 6v1.5zm-1.5-1.5c0-2.485-2.015-4.5-4.5-4.5H7.75c-2.485 0-4.5 2.015-4.5 4.5v.15h17.5v-.15z"/>',
     cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',
-    stats: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'
+    stats: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8.6 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.1-.4H2.8a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .4-1.1V2.8a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15.4 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.39.37.72.69.96.3.23.67.35 1.05.34h.06a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"/>'
   };
 
   function svg(pathContent, opts = {}) {
@@ -109,6 +107,14 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         base[key] = { ...(base[key] || {}), ...(saved[key] || {}) };
       });
       delete base.sidebar;
+      base.homeCluster.x = clamp(Number(base.homeCluster.x) || DEFAULT_LAYOUT.homeCluster.x, 8, 92);
+      base.homeCluster.y = clamp(Number(base.homeCluster.y) || DEFAULT_LAYOUT.homeCluster.y, 6, 92);
+      base.search.x = clamp(Number(base.search.x) || DEFAULT_LAYOUT.search.x, 8, 92);
+      base.search.y = clamp(Number(base.search.y) || DEFAULT_LAYOUT.search.y, 8, 92);
+      base.dock.x = clamp(Number(base.dock.x) || DEFAULT_LAYOUT.dock.x, 8, 90);
+      base.dock.y = clamp(Number(base.dock.y) || DEFAULT_LAYOUT.dock.y, 38, 96);
+      base.nowPlaying.x = clamp(Number(base.nowPlaying.x) || DEFAULT_LAYOUT.nowPlaying.x, 12, 88);
+      base.nowPlaying.y = clamp(Number(base.nowPlaying.y) || DEFAULT_LAYOUT.nowPlaying.y, 72, 96);
       return base;
     } catch {
       return cloneLayout(DEFAULT_LAYOUT);
@@ -366,6 +372,13 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     if (window.__agSearchHotkeyInstalled) return;
     window.__agSearchHotkeyInstalled = true;
     window.addEventListener('keydown', event => {
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key === ',') {
+        openSettingsPanel();
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        return;
+      }
       if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || event.key?.toLowerCase?.() !== 'k') return;
       if (!focusAmbientSearch()) return;
       event.preventDefault();
@@ -1215,7 +1228,12 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       index += 1;
     };
     apply();
-    window.setInterval(apply, 1800);
+    const rotate = () => {
+      if (!input.isConnected) return;
+      apply();
+      window.setTimeout(rotate, 1800);
+    };
+    window.setTimeout(rotate, 1800);
     const load = () => loadPersonalSearchPlaceholders().then(personalLabels => {
       if (personalLabels.length) {
         labels = personalLabels;
@@ -1629,10 +1647,6 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
         realBtn.dispatchEvent(evt);
       });
       document.body.appendChild(hitbox);
-      if (!window.__agHitboxNotified) {
-        setTimeout(() => Spicetify.showNotification("AmbientGlass: Hitbox OK"), 1000);
-        window.__agHitboxNotified = true;
-      }
     } else if (hitbox.parentElement !== document.body) {
       document.body.appendChild(hitbox);
     }
@@ -1725,10 +1739,6 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       dock.style.setProperty('display', 'none', 'important');
       dock.style.setProperty('pointer-events', 'none', 'important');
     }
-    if (!window.__agDockNotified && document.querySelector('.ag-native-dock-button')) {
-      setTimeout(() => Spicetify.showNotification("AmbientGlass: Dock OK"), 1000);
-      window.__agDockNotified = true;
-    }
   }
 
   function findNativeLeftRailButtons() {
@@ -1774,6 +1784,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       .map((button, index) => ({ key: `ext-${index}`, button }));
     const entries = [
       { key: 'profile', button: profile },
+      { key: 'settings', button: ensureSettingsDockButton() },
       { key: 'notify', button: smallRail[0] },
       { key: 'friends', button: smallRail[1] },
       { key: 'market', button: market ? ensureNativeDockProxy('market', market, svg(ICONS.cart, { size: 18 })) : null },
@@ -1811,6 +1822,28 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       document.body.appendChild(proxy);
     }
     return proxy;
+  }
+
+  function ensureSettingsDockButton() {
+    let button = document.getElementById('ag-native-settings-button');
+    if (!button) {
+      button = document.createElement('button');
+      button.id = 'ag-native-settings-button';
+      button.type = 'button';
+      button.className = 'ag-native-dock-proxy';
+      button.setAttribute('aria-label', 'AmbientGlass Settings');
+      button.title = 'AmbientGlass Settings';
+      button.innerHTML = svg(ICONS.settings, { size: 18 });
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        openSettingsPanel();
+      });
+      document.body.appendChild(button);
+    } else if (button.parentElement !== document.body) {
+      document.body.appendChild(button);
+    }
+    return button;
   }
 
   function styleNativeDockButton(button, key, left, top) {
@@ -3414,7 +3447,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     {
       kicker: 'Profile Dock',
       title: 'Settings and addons',
-      text: 'Hover your profile picture to open the AmbientGlass dock with Settings, Marketplace, Listening Stats, and more installed addons.'
+      text: 'Hover your profile picture to reveal the AmbientGlass dock. The first button below it opens Settings; Marketplace, Listening Stats, and other installed addons sit below.'
     }
   ];
 
@@ -3522,8 +3555,6 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     if (document.getElementById('ag-settings-panel')) return;
     const d = document.createElement('div'); d.id = 'ag-settings-panel';
     document.body?.classList.add('ag-settings-open');
-    localStorage.removeItem('ag-privacy');
-    document.getElementById('ag-privacy-logic')?.remove();
     const tip = text => `<button class="ag-setting-help" type="button" aria-label="${text}" title="${text}">?</button>`;
     
     d.innerHTML = `
@@ -3706,8 +3737,6 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     });
 
     d.querySelector('#ag-save-settings').addEventListener('click', () => {
-      localStorage.removeItem('ag-privacy');
-      document.getElementById('ag-privacy-logic')?.remove();
       Object.keys(DEFAULTS).forEach(k => {
         const el = d.querySelector('#ag-col-' + k) || d.querySelector('#ag-range-' + k) || d.querySelector('#ag-check-' + k) || d.querySelector('#ag-select-' + k);
         if (el) {
@@ -3727,12 +3756,9 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
       Spicetify.showNotification("AmbientGlass: Applied");
     });
     d.querySelector('#ag-reset-settings').addEventListener('click', () => {
-      localStorage.removeItem('ag-privacy');
       Object.keys(DEFAULTS).forEach(k => localStorage.removeItem('ag-setting-' + k));
       
       applyCustomColors();
-      document.getElementById('ag-privacy-logic')?.remove();
-      
       d.remove();
       document.body?.classList.remove('ag-settings-open');
       setNowPlayingPreview(false);
@@ -4139,11 +4165,17 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
     });
   }
   function injectSettingsToMenu() {
+    return;
     const menus = Array.from(document.querySelectorAll('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content]'));
-    const menu = menus.find(m => {
-      const text = (m.textContent || '').toLowerCase();
-      return text.includes('account') || text.includes('profile') || text.includes('log out') || text.includes('settings');
+    const visibleMenus = menus.filter(m => {
+      const rect = m.getBoundingClientRect?.();
+      return !!rect?.width && !!rect?.height;
     });
+    const menu = visibleMenus.find(m => {
+      const text = (m.textContent || '').toLowerCase();
+      return text.includes('account') || text.includes('profile') || text.includes('log out') || text.includes('settings') ||
+             text.includes('konto') || text.includes('profil') || text.includes('abmelden') || text.includes('einstellungen');
+    }) || (visibleMenus.length === 1 ? visibleMenus[0] : null);
     if (menu && !menu.querySelector('#ag-menu-item')) {
       document.querySelectorAll('#ag-menu-item').forEach(item => {
         if (!item.closest('ul.main-contextMenu-menu, div[role="menu"], [data-radix-menu-content]')) item.remove();
@@ -4589,10 +4621,7 @@ console.log('>> [AmbientGlass] Script Triggered! <<');
   }
 
   function init() {
-    console.log("%c AmbientGlass - EROX %c", "background:#7b5fdb;color:#fff;padding:5px;border-radius:5px;", "");
     try { applyCustomColors(); } catch(e) {}
-    localStorage.removeItem('ag-privacy');
-    document.getElementById('ag-privacy-logic')?.remove();
     
     triggerStartupAnimation(); createPageCoverBackground(); createBlobs(); createHeroGlow(); createGlowSmoother();
     createHomeCluster(); createSearchOverlay(); createUpNextCard(); createLibraryPanel();
